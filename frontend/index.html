@@ -8,13 +8,23 @@
 </head>
 <body>
     <div id="app">
+        <!-- Top Navigation for Mobile -->
+        <nav class="topnav" id="topnav">
+            <div class="container-topnav">
+                <button class="hamburger" id="openSidebar" aria-label="Open company/filter menu">☰</button>
+                <span class="nav-title">📰 Marketing News Reader</span>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+            </div>
+        </nav>
         <header class="header">
             <div class="container">
                 <h1>📰 Marketing News Reader</h1>
                 <p class="subtitle">Real-time news aggregation for 20 major companies</p>
             </div>
         </header>
-        <aside class="sidebar">
+        <!-- Sidebar and Overlay for mobile navigation -->
+        <aside class="sidebar" id="sidebar">
+            <button class="close-sidebar" id="closeSidebar" aria-label="Close menu">&times;</button>
             <div class="sidebar-content">
                 <h3>Companies</h3>
                 <div class="company-filters" id="companyFilters"></div>
@@ -33,10 +43,11 @@
                     <button id="resetBtn" class="btn btn-secondary">Reset</button>
                 </div>
                 <div class="filter-section">
-                    <button id="refreshBtn" class="btn btn-refresh">🔄 Refresh News</button>
+                    <button id="refreshBtn" class="btn btn-refresh floating-refresh">🔄 Refresh</button>
                 </div>
             </div>
         </aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
         <main class="main-content">
             <div class="container">
                 <div class="stats" id="stats">
