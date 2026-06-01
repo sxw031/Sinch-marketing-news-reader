@@ -29,11 +29,10 @@ const companyDomains = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Initializing MarketFeed...');
+    console.log('Initializing MarketFeed Mobile Optimized...');
     
     setupDateConstraints();
     
-    // Load initial selection from localStorage
     const saved = localStorage.getItem(SELECTED_COMPANIES_KEY);
     if (saved) {
         selectedCompanies = JSON.parse(saved);
@@ -100,6 +99,7 @@ function renderCompanyGrid() {
             <span>${company.name}</span>
         `;
         
+        // Use click for better compatibility, style handles active state
         item.addEventListener('click', () => {
             item.classList.toggle('selected');
         });
@@ -118,7 +118,7 @@ function updateSelectionLabel() {
     } else if (count === availableCompanies.length) {
         label.textContent = 'All Companies Selected';
     } else {
-        label.textContent = `${count} Companies Selected`;
+        label.textContent = `${count} Selected`;
     }
 }
 
@@ -226,28 +226,30 @@ function showArticleModal(article) {
     const logoUrl = getLogoUrl(article.company);
     
     modalBody.innerHTML = `
-        <div style="text-align: center; margin-bottom: 2rem; background: #f8fafc; padding: 2rem; border-radius: 12px;">
-            <img src="${logoUrl}" alt="${article.company}" style="max-width: 200px; height: 100px; object-fit: contain;">
+        <div style="text-align: center; margin-bottom: 1.5rem; background: #f1f5f9; padding: 2rem; border-radius: 16px;">
+            <img src="${logoUrl}" alt="${article.company}" style="max-width: 160px; height: 80px; object-fit: contain;">
         </div>
-        <h2>${escapeHtml(article.title)}</h2>
+        <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">${escapeHtml(article.title)}</h2>
         <div class="news-card-meta" style="margin-bottom: 1.5rem;">
             <span class="badge badge-company">${article.company}</span>
             <span class="badge badge-source">${article.source}</span>
             <span class="news-card-date">${formatDate(article.publishedAt)}</span>
         </div>
-        <p>${escapeHtml(article.description || 'No description available')}</p>
+        <p style="font-size: 1rem; line-height: 1.6; color: var(--text-main);">${escapeHtml(article.description || 'No description available')}</p>
         <div style="margin-top: 2rem;">
-            <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="text-decoration: none; display: inline-block;">Read Full Article →</a>
+            <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="text-decoration: none; display: block; text-align: center;">Read Full Article →</a>
         </div>
     `;
     modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
 }
 
 function setupEventListeners() {
-    // Company Selector Modal
     const selectorModal = document.getElementById('companySelectorModal');
+    const articleModal = document.getElementById('articleModal');
+
+    // Company Selector
     document.getElementById('openCompanySelector').addEventListener('click', () => {
-        // Sync grid with current selection
         document.querySelectorAll('.company-item').forEach(item => {
             if (selectedCompanies.includes(item.dataset.company)) {
                 item.classList.add('selected');
@@ -256,10 +258,12 @@ function setupEventListeners() {
             }
         });
         selectorModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
     });
 
     document.getElementById('closeSelector').addEventListener('click', () => {
         selectorModal.style.display = 'none';
+        document.body.style.overflow = '';
     });
 
     document.getElementById('applySelectorBtn').addEventListener('click', () => {
@@ -267,6 +271,7 @@ function setupEventListeners() {
         selectedCompanies = selected;
         localStorage.setItem(SELECTED_COMPANIES_KEY, JSON.stringify(selectedCompanies));
         selectorModal.style.display = 'none';
+        document.body.style.overflow = '';
         renderNews();
     });
 
@@ -278,7 +283,7 @@ function setupEventListeners() {
         document.querySelectorAll('.company-item').forEach(item => item.classList.remove('selected'));
     });
 
-    // Other UI
+    // Filtering & Refresh
     document.getElementById('refreshBtn').addEventListener('click', loadNews);
     document.getElementById('searchInput').addEventListener('input', renderNews);
     document.getElementById('startDate').addEventListener('change', renderNews);
@@ -296,6 +301,7 @@ function setupEventListeners() {
         renderCompanyGrid();
     });
 
+    // Theme Toggle
     document.getElementById('themeToggle').addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
@@ -304,19 +310,26 @@ function setupEventListeners() {
         document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
     });
 
+    // Modal Closing
     document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('articleModal').style.display = 'none';
+        articleModal.style.display = 'none';
+        document.body.style.overflow = '';
     });
 
     window.addEventListener('click', (e) => {
-        if (e.target === selectorModal) selectorModal.style.display = 'none';
-        if (e.target === document.getElementById('articleModal')) document.getElementById('articleModal').style.display = 'none';
+        if (e.target === selectorModal) {
+            selectorModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        if (e.target === articleModal) {
+            articleModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     });
 }
 
 function updateStats(filteredCount) {
     document.getElementById('totalArticles').textContent = filteredCount !== undefined ? filteredCount : allNews.length;
-    document.getElementById('totalCompanies').textContent = availableCompanies.length;
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
