@@ -320,9 +320,9 @@ function setupEventListeners() {
 
     document.getElementById('refreshBtn').addEventListener('click', loadNews);
     document.getElementById('searchInput').addEventListener('input', renderNews);
-    document.getElementById('startDate').addEventListener('change', renderNews);
-    document.getElementById('endDate').addEventListener('change', renderNews);
-    document.getElementById('categoryFilter').addEventListener('change', renderNews);
+    
+    // Explicit Apply Filters for Dates and Category
+    document.getElementById('applyFiltersBtn').addEventListener('click', renderNews);
     
     document.getElementById('resetBtn').addEventListener('click', () => {
         document.getElementById('startDate').value = '';

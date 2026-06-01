@@ -1,17 +1,16 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-const USER_AGENT = process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+const USER_AGENT = process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
 /**
- * Search for company news using DuckDuckGo (free, no API key required)
- * Scrapes public search results
+ * Search for company news using DuckDuckGo
  */
 async function searchDuckDuckGo(company, options = {}) {
   try {
     console.log(`Searching DuckDuckGo for ${company} news...`);
 
-    const query = `${company} news -site:reddit.com`;
+    const query = `${company} news`;
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
     const response = await axios.get(url, {
@@ -22,27 +21,20 @@ async function searchDuckDuckGo(company, options = {}) {
     const $ = cheerio.load(response.data);
     const articles = [];
 
-    // Enhanced selector list for various DDG HTML structures
-    const results = $('.result, .links_main, .web-result, .nrn-react-div');
-    
-    results.each((index, element) => {
+    $('.result').each((index, element) => {
       if (articles.length >= (options.limit || 20)) return false;
 
       const $el = $(element);
-      const titleEl = $el.find('a[data-testid="result-title-a"], .result__a, .result__title a, .result-link');
-      const descEl = $el.find('.result__snippet, .result-snippet, [data-testid="result-snippet"]');
+      const titleEl = $el.find('.result__a');
+      const descEl = $el.find('.result__snippet');
       
       let title = titleEl.text().trim();
       let description = descEl.text().trim();
       let url = titleEl.attr('href');
 
-      // Fallback for different structures
-      if (!title) title = $el.find('h2').text().trim();
-      if (!url) url = $el.find('a').first().attr('href');
-
       if (!title || !url) return;
 
-      // Handle DuckDuckGo's internal redirect URLs
+      // Clean up URL
       if (url.startsWith('//')) url = 'https:' + url;
       if (url.includes('uddg=')) {
         try {
@@ -53,45 +45,28 @@ async function searchDuckDuckGo(company, options = {}) {
         } catch (e) {}
       }
 
-      if (title && url && !url.includes('duckduckgo.com') && !url.includes('google.com')) {
+      if (title && url && !url.includes('duckduckgo.com')) {
+        // Extract domain as source if no clear source found
+        let source = 'Web Search';
+        try {
+            const domain = new URL(url).hostname.replace('www.', '');
+            source = domain.charAt(0).toUpperCase() + domain.slice(1);
+        } catch (e) {}
+
         articles.push({
           title,
           description: description || 'No description available',
           url,
-          source: 'Web Search',
+          source: source,
           imageUrl: '',
           publishedAt: new Date().toISOString(),
-          author: 'Web Search',
+          author: source,
           company: company,
-          category: 'news'
+          category: 'General'
         });
       }
     });
 
-    // If still no articles, try a broader search or different selectors
-    if (articles.length === 0) {
-      $('a').each((i, el) => {
-        const href = $(el).attr('href');
-        const text = $(el).text().trim();
-        if (href && href.startsWith('http') && !href.includes('duckduckgo') && text.length > 20) {
-           if (articles.length < 5) {
-             articles.push({
-               title: text,
-               description: 'News from search results',
-               url: href,
-               source: 'Web Search',
-               imageUrl: '',
-               publishedAt: new Date().toISOString(),
-               author: 'Web Search',
-               company: company,
-               category: 'news'
-             });
-           }
-        }
-      });
-    }
-
-    console.log(`Found ${articles.length} search results for ${company}`);
     return articles;
   } catch (error) {
     console.error(`Error searching DuckDuckGo for ${company}:`, error.message);
@@ -100,7 +75,7 @@ async function searchDuckDuckGo(company, options = {}) {
 }
 
 /**
- * Search Bing News for company-related news (free tier available)
+ * Search Bing News for company-related news
  */
 async function searchBingNews(company, options = {}) {
   try {
@@ -116,28 +91,31 @@ async function searchBingNews(company, options = {}) {
     const $ = cheerio.load(response.data);
     const articles = [];
 
-    // Bing News uses various structures, let's be more flexible
-    const newsItems = $('.news-card, .newsitem, [data-author], .card-content');
-    
-    newsItems.each((index, element) => {
+    $('.news-card, .newsitem').each((index, element) => {
       if (articles.length >= (options.limit || 20)) return false;
 
       const $el = $(element);
-      const titleEl = $el.find('a.title, .title, h2, h3, a[data-log]');
-      const descEl = $el.find('.snippet, .description, p');
-      const sourceEl = $el.find('.source, .attribution, cite');
+      const titleEl = $el.find('a.title, .title');
+      const descEl = $el.find('.snippet, .description');
+      const sourceEl = $el.find('.source, .attribution');
 
       let title = titleEl.text().trim();
-      let url = titleEl.attr('href') || $el.find('a').first().attr('href');
+      let url = titleEl.attr('href');
       let description = descEl.text().trim();
-      let source = sourceEl.text().trim() || 'Bing News';
+      let rawSource = sourceEl.text().trim() || 'Bing News';
+
+      // Normalize source names (e.g., MSN, 1D, 2D etc are often just noise from Bing)
+      let source = rawSource;
+      if (source.length <= 3 || /^\d+[DWMY]/.test(source)) {
+          source = 'Bing News';
+      }
+      if (source.toUpperCase() === 'MSN') source = 'MSN News';
 
       if (!title || !url) return;
 
-      // Ensure URL is absolute
       if (url.startsWith('/')) url = 'https://www.bing.com' + url;
 
-      if (title && url && url.startsWith('http') && !url.includes('bing.com/news')) {
+      if (title && url && url.startsWith('http')) {
         articles.push({
           title,
           description: description || 'No description available',
@@ -147,12 +125,11 @@ async function searchBingNews(company, options = {}) {
           publishedAt: new Date().toISOString(),
           author: source,
           company: company,
-          category: 'news'
+          category: 'General'
         });
       }
     });
 
-    console.log(`Found ${articles.length} news articles about ${company}`);
     return articles;
   } catch (error) {
     console.error(`Error searching Bing News for ${company}:`, error.message);
