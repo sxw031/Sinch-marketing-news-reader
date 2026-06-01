@@ -13,7 +13,7 @@ const COMPANIES = [
         date: 'time, .news-date, .published-date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.hsbc.com/rss/news.xml'}]
+    sources: [{type: 'rss', url: 'https://www.hsbc.com/en/news-and-media/media-releases?rss=1'}]
   },
   {
     id: 'grab',
@@ -29,7 +29,7 @@ const COMPANIES = [
         date: 'time, .date'
       }
     },
-    sources: [{type: 'rss', url: 'https://grab.com/feed/'}]
+    sources: [{type: 'rss', url: 'https://www.grab.com/sg/press/feed/'}]
   },
   {
     id: 'vge',
@@ -128,7 +128,7 @@ const COMPANIES = [
         date: 'time, .date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.dbs.com/rss/news.xml'}]
+    sources: [{type: 'rss', url: 'https://www.dbs.com/newsroom/default.page?rss=1'}]
   },
   {
     id: 'tencent',
@@ -190,7 +190,7 @@ const COMPANIES = [
         date: 'time, span.date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.citigroup.com/rss/news.xml'}]
+    sources: [{type: 'rss', url: 'https://www.citigroup.com/global/news/rss'}]
   },
   {
     id: 'gov-singapore',

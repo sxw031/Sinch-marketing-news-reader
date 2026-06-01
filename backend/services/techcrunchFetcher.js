@@ -9,12 +9,21 @@ async function fetchTechCrunchNews(company, options = {}) {
 
     // Filter articles mentioning the company
     const companyLower = company.toLowerCase();
-    const filteredArticles = (feed.items || [])
+    let filteredArticles = (feed.items || [])
       .filter(item => 
         (item.title && item.title.toLowerCase().includes(companyLower)) ||
-        (item.content && item.content.toLowerCase().includes(companyLower))
-      )
-      .slice(0, options.limit || 15);
+        (item.content && item.content.toLowerCase().includes(companyLower)) ||
+        (item.categories && item.categories.some(cat => cat.toLowerCase().includes(companyLower)))
+      );
+
+    // If no specific company news, take the most recent general tech news as fallback 
+    // but mark them clearly or limit them
+    if (filteredArticles.length === 0) {
+      console.log(`No direct TechCrunch matches for ${company}, taking top general news.`);
+      filteredArticles = (feed.items || []).slice(0, 3);
+    } else {
+      filteredArticles = filteredArticles.slice(0, options.limit || 15);
+    }
 
     return filteredArticles.map(item => ({
       title: item.title || 'Untitled',
