@@ -19,15 +19,10 @@
                 </div>
                 
                 <div class="nav-center">
-                    <div class="company-dropdown">
-                        <button class="dropbtn" id="companyDropdownBtn">
-                            <span>Select Companies</span>
-                            <i class="chevron-down"></i>
-                        </button>
-                        <div class="dropdown-content" id="companyFilters">
-                            <!-- Company checkboxes will be injected here -->
-                        </div>
-                    </div>
+                    <button class="selector-trigger" id="openCompanySelector">
+                        <span id="selectedCountLabel">Select Companies</span>
+                        <span class="chevron">▾</span>
+                    </button>
                 </div>
 
                 <div class="nav-right">
@@ -85,6 +80,26 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Company Selector Modal (Grid Layout) -->
+    <div id="companySelectorModal" class="modal">
+        <div class="modal-content selector-modal">
+            <div class="modal-header">
+                <h2>Select Companies</h2>
+                <span class="close" id="closeSelector">&times;</span>
+            </div>
+            <div class="selector-actions">
+                <button id="selectAllBtn" class="btn-outline">Select All</button>
+                <button id="deselectAllBtn" class="btn-outline">Deselect All</button>
+            </div>
+            <div class="company-grid" id="companyFilters">
+                <!-- Company grid items will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button id="applySelectorBtn" class="btn-primary">Apply Selection</button>
+            </div>
+        </div>
     </div>
 
     <!-- Article Detail Modal -->
