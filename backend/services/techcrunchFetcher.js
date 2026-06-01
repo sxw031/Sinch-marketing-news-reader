@@ -1,10 +1,9 @@
 const Parser = require('rss-parser');
-const axios = require('axios');
 const parser = new Parser();
 
-async function fetchFromTechCrunch(company, options = {}) {
+async function fetchTechCrunchNews(company, options = {}) {
   try {
-    // Fetch from TechCrunch RSS feed
+    console.log(`Fetching TechCrunch RSS for ${company}...`);
     const feedUrl = 'https://techcrunch.com/feed/';
     const feed = await parser.parseURL(feedUrl);
 
@@ -15,7 +14,7 @@ async function fetchFromTechCrunch(company, options = {}) {
         (item.title && item.title.toLowerCase().includes(companyLower)) ||
         (item.content && item.content.toLowerCase().includes(companyLower))
       )
-      .slice(0, options.limit || 20);
+      .slice(0, options.limit || 15);
 
     return filteredArticles.map(item => ({
       title: item.title || 'Untitled',
@@ -29,9 +28,9 @@ async function fetchFromTechCrunch(company, options = {}) {
       category: 'technology'
     }));
   } catch (error) {
-    console.error(`Error fetching from TechCrunch for ${company}:`, error.message);
+    console.error(`Error fetching TechCrunch RSS for ${company}:`, error.message);
     return [];
   }
 }
 
-module.exports = { fetchFromTechCrunch };
+module.exports = { fetchTechCrunchNews };
