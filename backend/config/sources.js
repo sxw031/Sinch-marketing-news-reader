@@ -13,7 +13,8 @@ const COMPANIES = [
         date: 'time, .news-date, .published-date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.hsbc.com/en/news-and-media/media-releases?rss=1'}]
+    // Updated HSBC RSS link to a more reliable one or removed if broken
+    sources: [{type: 'rss', url: 'https://www.hsbc.com/news-and-media/media-releases?rss=1'}]
   },
   {
     id: 'grab',
@@ -52,7 +53,7 @@ const COMPANIES = [
         date: 'time, .date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.cathaypacific.com/news/rss'}]
+    sources: [] // Removed potentially broken RSS
   },
   {
     id: 'alibaba',
@@ -68,7 +69,7 @@ const COMPANIES = [
         date: 'span.date, time'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.alibaba.com/feed'}]
+    sources: [] // Rely on web search for better reliability
   },
   {
     id: 'charter',
@@ -98,7 +99,7 @@ const COMPANIES = [
         date: 'time, .date, span.date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.ctrip.com/feed'}]
+    sources: []
   },
   {
     id: 'didi',
@@ -190,7 +191,7 @@ const COMPANIES = [
         date: 'time, span.date'
       }
     },
-    sources: [{type: 'rss', url: 'https://www.citigroup.com/global/news/rss'}]
+    sources: []
   },
   {
     id: 'gov-singapore',
@@ -213,7 +214,7 @@ const COMPANIES = [
     name: 'Binance',
     category: 'Cryptocurrency',
     website: null,
-    sources: [{type: 'rss', url: 'https://www.binance.com/en/feed'}]
+    sources: [] // Binance RSS is often blocked or requires headers
   },
   {
     id: 'shopback',

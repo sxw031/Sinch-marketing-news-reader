@@ -79,9 +79,10 @@ async function loadCompanies() {
 function getLogoUrl(companyName) {
     const domain = companyDomains[companyName];
     if (domain) {
-        return `https://logo.clearbit.com/${domain}`;
+        // Use a more robust combination of logo services
+        return `https://logo.clearbit.com/${domain}?size=200`;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=random&size=128`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
 }
 
 function renderCompanyGrid() {
