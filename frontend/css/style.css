@@ -266,10 +266,31 @@ body {
   justify-content: center;
   padding: 1.5rem;
   border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Skeleton loader effect for images */
+.news-card-image-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+  display: none;
+}
+
+.news-card-image-container.loading::before {
+  display: block;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
 }
 
 [data-theme="dark"] .news-card-image-container {
-  background: #f8fafc; /* Keep logo container light for better visibility of dark logos */
+  background: #f1f5f9; /* Slightly off-white for better dark mode contrast */
 }
 
 .news-card-logo {

@@ -4,7 +4,7 @@ let allNews = [];
 let availableCompanies = [];
 let selectedCompanies = [];
 
-// Company to Domain mapping for Clearbit Logo API
+// Company to Domain mapping for Logo APIs
 const companyDomains = {
     'HSBC': 'hsbc.com',
     'Grab': 'grab.com',
@@ -29,7 +29,7 @@ const companyDomains = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Initializing MarketFeed Mobile Optimized...');
+    console.log('Initializing MarketFeed Optimized...');
     
     setupDateConstraints();
     
@@ -76,14 +76,40 @@ async function loadCompanies() {
     }
 }
 
-function getLogoUrl(companyName) {
+/**
+ * Enhanced Logo Fetching Logic
+ * 1. Primary: Clearbit (High quality)
+ * 2. Secondary: Google Favicon (Very fast & reliable)
+ * 3. Fallback: UI Avatars (Instant, never fails)
+ */
+function getLogoUrl(companyName, type = 'primary') {
     const domain = companyDomains[companyName];
-    if (domain) {
-        // Use a more robust combination of logo services
-        return `https://logo.clearbit.com/${domain}?size=200`;
+    
+    if (type === 'primary' && domain) {
+        return `https://logo.clearbit.com/${domain}?size=128`;
     }
+    
+    if (type === 'secondary' && domain) {
+        return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    }
+    
+    // Final fallback: UI Avatars
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
 }
+
+// Global function for img onerror to handle fallbacks
+window.handleLogoError = function(img, companyName) {
+    const currentSrc = img.src;
+    const domain = companyDomains[companyName];
+    
+    if (currentSrc.includes('clearbit.com') && domain) {
+        // Switch to Google Favicon
+        img.src = getLogoUrl(companyName, 'secondary');
+    } else if (!currentSrc.includes('ui-avatars.com')) {
+        // Switch to UI Avatars
+        img.src = getLogoUrl(companyName, 'fallback');
+    }
+};
 
 function renderCompanyGrid() {
     const container = document.getElementById('companyFilters');
@@ -96,11 +122,13 @@ function renderCompanyGrid() {
         item.dataset.company = company.name;
         
         item.innerHTML = `
-            <img src="${getLogoUrl(company.name)}" alt="${company.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=random'">
+            <img src="${getLogoUrl(company.name)}" 
+                 alt="${company.name}" 
+                 loading="lazy"
+                 onerror="handleLogoError(this, '${company.name}')">
             <span>${company.name}</span>
         `;
         
-        // Use click for better compatibility, style handles active state
         item.addEventListener('click', () => {
             item.classList.toggle('selected');
         });
@@ -205,7 +233,11 @@ function createNewsCard(article) {
     return `
         <div class="news-card ${isStrategic ? 'strategic' : ''}" data-article='${JSON.stringify(article).replace(/'/g, "&apos;")}'>
             <div class="news-card-image-container">
-                <img src="${logoUrl}" alt="${article.company}" class="news-card-logo" onerror="this.src='https://via.placeholder.com/100?text=${encodeURIComponent(article.company)}'">
+                <img src="${logoUrl}" 
+                     alt="${article.company}" 
+                     class="news-card-logo" 
+                     loading="lazy"
+                     onerror="handleLogoError(this, '${article.company}')">
             </div>
             <div class="news-card-content">
                 <h3 class="news-card-title">${escapeHtml(article.title)}</h3>
@@ -227,8 +259,11 @@ function showArticleModal(article) {
     const logoUrl = getLogoUrl(article.company);
     
     modalBody.innerHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem; background: #f1f5f9; padding: 2rem; border-radius: 16px;">
-            <img src="${logoUrl}" alt="${article.company}" style="max-width: 160px; height: 80px; object-fit: contain;">
+        <div style="text-align: center; margin-bottom: 1.5rem; background: #ffffff; padding: 2rem; border-radius: 16px; border: 1px solid var(--border);">
+            <img src="${logoUrl}" 
+                 alt="${article.company}" 
+                 style="max-width: 160px; height: 80px; object-fit: contain;"
+                 onerror="handleLogoError(this, '${article.company}')">
         </div>
         <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">${escapeHtml(article.title)}</h2>
         <div class="news-card-meta" style="margin-bottom: 1.5rem;">
@@ -242,14 +277,13 @@ function showArticleModal(article) {
         </div>
     `;
     modal.style.display = 'block';
-    document.body.style.overflow = 'hidden'; // Prevent background scroll
+    document.body.style.overflow = 'hidden';
 }
 
 function setupEventListeners() {
     const selectorModal = document.getElementById('companySelectorModal');
     const articleModal = document.getElementById('articleModal');
 
-    // Company Selector
     document.getElementById('openCompanySelector').addEventListener('click', () => {
         document.querySelectorAll('.company-item').forEach(item => {
             if (selectedCompanies.includes(item.dataset.company)) {
@@ -284,7 +318,6 @@ function setupEventListeners() {
         document.querySelectorAll('.company-item').forEach(item => item.classList.remove('selected'));
     });
 
-    // Filtering & Refresh
     document.getElementById('refreshBtn').addEventListener('click', loadNews);
     document.getElementById('searchInput').addEventListener('input', renderNews);
     document.getElementById('startDate').addEventListener('change', renderNews);
@@ -302,7 +335,6 @@ function setupEventListeners() {
         renderCompanyGrid();
     });
 
-    // Theme Toggle
     document.getElementById('themeToggle').addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
@@ -311,7 +343,6 @@ function setupEventListeners() {
         document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
     });
 
-    // Modal Closing
     document.getElementById('closeModal').addEventListener('click', () => {
         articleModal.style.display = 'none';
         document.body.style.overflow = '';
