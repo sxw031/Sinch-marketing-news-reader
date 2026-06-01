@@ -1,30 +1,21 @@
 const { db_helpers } = require('../models/db');
 const { fetchMultipleRSSFeeds } = require('./rssFeedFetcher');
-const { scrapeCompanyWebsite, scrapeReddit, scrapeX } = require('./webScraper');
+const { fetchTechCrunchNews } = require('./techcrunchFetcher');
 const { searchDuckDuckGo, searchBingNews } = require('./webSearch');
-const { fetchTechCrunchNews } = require('./techcrunchRss');
 const { COMPANIES } = require('../config/sources');
 const moment = require('moment');
 
+/**
+ * Fetch news for a specific company using only free public sources
+ */
 async function fetchNewsForCompany(company) {
   const companyConfig = COMPANIES.find(c => c.name.toLowerCase() === company.toLowerCase());
   if (!companyConfig) return [];
   
   let allNews = [];
   
+  // 1. Fetch from RSS feeds (company official feeds)
   try {
-    // 1. Fetch from company official website (via web scraping)
-    if (companyConfig.website) {
-      console.log(`Scraping ${company} official website...`);
-      const websiteNews = await scrapeCompanyWebsite(company, companyConfig.website);
-      allNews = allNews.concat(websiteNews);
-    }
-  } catch (error) {
-    console.error(`Error scraping ${company} website:`, error.message);
-  }
-
-  try {
-    // 2. Fetch from RSS feeds (company official feeds)
     if (companyConfig.sources && companyConfig.sources.length > 0) {
       const rssFeedUrls = companyConfig.sources
         .filter(s => s.type === 'rss')
@@ -40,8 +31,8 @@ async function fetchNewsForCompany(company) {
     console.error(`Error fetching RSS feeds for ${company}:`, error.message);
   }
 
+  // 2. Fetch from TechCrunch (free RSS feed)
   try {
-    // 3. Fetch from TechCrunch (free RSS feed)
     console.log(`Fetching TechCrunch news for ${company}...`);
     const techcrunchNews = await fetchTechCrunchNews(company, { limit: 10 });
     allNews = allNews.concat(techcrunchNews);
@@ -49,35 +40,17 @@ async function fetchNewsForCompany(company) {
     console.error(`Error fetching TechCrunch news for ${company}:`, error.message);
   }
 
+  // 3. Web search for news (DuckDuckGo) - No API Key required
   try {
-    // 4. Scrape Reddit for public discussions
-    console.log(`Scraping Reddit for ${company}...`);
-    const redditNews = await scrapeReddit(company, { limit: 10 });
-    allNews = allNews.concat(redditNews);
-  } catch (error) {
-    console.error(`Error scraping Reddit for ${company}:`, error.message);
-  }
-
-  try {
-    // 5. Scrape X (Twitter) for public posts
-    console.log(`Scraping X for ${company}...`);
-    const xNews = await scrapeX(company, { limit: 10 });
-    allNews = allNews.concat(xNews);
-  } catch (error) {
-    console.error(`Error scraping X for ${company}:`, error.message);
-  }
-
-  try {
-    // 6. Web search for news (DuckDuckGo)
-    console.log(`Web searching for ${company} news...`);
+    console.log(`Web searching (DuckDuckGo) for ${company} news...`);
     const searchNews = await searchDuckDuckGo(company, { limit: 15 });
     allNews = allNews.concat(searchNews);
   } catch (error) {
     console.error(`Error web searching for ${company}:`, error.message);
   }
 
+  // 4. Web search for news (Bing News) - Scraped, no API Key required
   try {
-    // 7. Web search for news (Bing News)
     console.log(`Bing News searching for ${company}...`);
     const bingNews = await searchBingNews(company, { limit: 10 });
     allNews = allNews.concat(bingNews);

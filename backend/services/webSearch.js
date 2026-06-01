@@ -12,7 +12,7 @@ async function searchDuckDuckGo(company, options = {}) {
     console.log(`Searching DuckDuckGo for ${company} news...`);
 
     const query = `${company} news -site:reddit.com`;
-    const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
     const response = await axios.get(url, {
       headers: { 'User-Agent': USER_AGENT },
@@ -22,21 +22,33 @@ async function searchDuckDuckGo(company, options = {}) {
     const $ = cheerio.load(response.data);
     const articles = [];
 
-    $('.result').each((index, element) => {
+    // Support both standard and HTML-only DuckDuckGo structures
+    const results = $('.result, .links_main');
+    results.each((index, element) => {
       if (articles.length >= (options.limit || 20)) return false;
 
-      const titleEl = $(element).find('.result__title a');
-      const descEl = $(element).find('.result__snippet');
-      const linkEl = titleEl;
-
+      const titleEl = $(element).find('.result__title a, .result-link, a.result__a');
+      const descEl = $(element).find('.result__snippet, .result-snippet, .result__snippet');
+      
       const title = titleEl.text().trim();
       const description = descEl.text().trim();
-      const url = linkEl.attr('href');
+      let url = titleEl.attr('href');
+
+      if (!url) return;
+
+      // Handle DuckDuckGo's internal redirect URLs
+      if (url.startsWith('//')) url = 'https:' + url;
+      if (url.includes('uddg=')) {
+        try {
+          const urlParams = new URLSearchParams(url.split('?')[1]);
+          url = decodeURIComponent(urlParams.get('uddg'));
+        } catch (e) {}
+      }
 
       if (title && url && !url.includes('duckduckgo.com')) {
         articles.push({
           title,
-          description,
+          description: description || 'No description available',
           url,
           source: 'Web Search (DuckDuckGo)',
           imageUrl: '',

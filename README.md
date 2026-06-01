@@ -40,7 +40,7 @@ An internal marketing news aggregator for tracking the latest news and updates f
 
 ## Features
 
-- **Multi-source Aggregation**: Pulls from RSS feeds, news APIs, and official company sources
+- **Multi-source Aggregation**: Pulls from public RSS feeds and official company sources via web scraping
 - **Real-time Updates**: Updates within 1 hour
 - **Smart Filtering**: Filter by company, date range, and category
 - **Authentic Sources**: Prioritizes verified news sources to avoid misinformation
@@ -52,7 +52,7 @@ An internal marketing news aggregator for tracking the latest news and updates f
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Backend**: Node.js with Express
 - **Database**: SQLite (local)
-- **Data Sources**: NewsAPI, RSS feeds, web scraping (Cheerio)
+- **Data Sources**: Public RSS feeds, web scraping (Cheerio)
 
 ## Installation
 
@@ -67,13 +67,13 @@ npm install
 Create a `.env` file in the root directory:
 
 ```
-NEWSAPI_KEY=your_api_key_here
+# NEWSAPI_KEY is no longer required
 PORT=3000
 DB_PATH=./data/news.db
 UPDATE_INTERVAL=60
 ```
 
-Get a free API key from [NewsAPI.org](https://newsapi.org)
+This application uses public data sources and does not require any API keys.
 
 ## Running the Application
 
@@ -158,7 +158,7 @@ POST /api/news/aggregate
 ## Features
 
 ### Multi-Source News Aggregation
-- **NewsAPI**: Breaking news across industries
+- **Web Search**: Public news results from search engines
 - **RSS Feeds**: Official company news feeds
 - **Web Scraping**: Latest announcements from official websites
 
