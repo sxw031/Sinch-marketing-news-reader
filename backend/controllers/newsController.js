@@ -1,7 +1,16 @@
 const { getNews, getAvailableCompanies, aggregateAllNews } = require('../services/newsAggregator');
 async function getAllNews(req, res) {
   try {
-    const filters = { company: req.query.company, companies: req.query.companies ? req.query.companies.split(',') : undefined, startDate: req.query.startDate, endDate: req.query.endDate, category: req.query.category, search: req.query.search, limit: req.query.limit ? parseInt(req.query.limit) : 100 };
+    const filters = { 
+      company: req.query.company, 
+      companies: req.query.companies ? req.query.companies.split(',') : undefined, 
+      startDate: req.query.startDate, 
+      endDate: req.query.endDate, 
+      category: req.query.category, 
+      source: req.query.source,
+      search: req.query.search, 
+      limit: req.query.limit ? parseInt(req.query.limit) : 100 
+    };
     const news = await getNews(filters);
     res.json({ success: true, count: news.length, data: news });
   } catch (error) {
@@ -38,4 +47,15 @@ async function triggerAggregation(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
-module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation };
+async function getSources(req, res) {
+  try {
+    const { db_helpers } = require('../models/db');
+    const sources = await db_helpers.all('SELECT DISTINCT source FROM news ORDER BY source ASC');
+    res.json({ success: true, count: sources.length, data: sources.map(s => s.source) });
+  } catch (error) {
+    console.error('Error getting sources:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources };

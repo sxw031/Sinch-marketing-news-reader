@@ -1,7 +1,7 @@
 const { db_helpers } = require('../models/db');
 const { fetchMultipleRSSFeeds } = require('./rssFeedFetcher');
 const { fetchTechCrunchNews } = require('./techcrunchFetcher');
-const { searchDuckDuckGo, searchBingNews } = require('./webSearch');
+const { searchDuckDuckGo, searchBingNews, searchAllPremiumSources } = require('./webSearch');
 const { COMPANIES } = require('../config/sources');
 const moment = require('moment');
 
@@ -12,7 +12,6 @@ function classifyArticle(title, description) {
   const content = (title + ' ' + (description || '')).toLowerCase();
   
   // 1. CSM Strategic Insights (Highest Priority)
-  // Keywords related to partnership, expansion, executive changes, and business health
   const csmKeywords = [
     'partnership', 'collaboration', 'expand', 'growth', 'acquisition', 'merger', 
     'ceo', 'executive', 'leadership', 'revenue', 'profit', 'earnings', 'quarterly', 
@@ -45,7 +44,7 @@ function classifyArticle(title, description) {
 }
 
 /**
- * Fetch news for a specific company using only free public sources
+ * Fetch news for a specific company including premium sources
  */
 async function fetchNewsForCompany(company) {
   const companyConfig = COMPANIES.find(c => c.name.toLowerCase() === company.toLowerCase());
@@ -70,7 +69,19 @@ async function fetchNewsForCompany(company) {
     console.error(`Error fetching RSS feeds for ${company}:`, error.message);
   }
 
-  // 2. Fetch from TechCrunch (free RSS feed)
+  // 2. Fetch from Premium Sources (LinkedIn, NYT, WSJ, Bloomberg, Official Website)
+  try {
+    console.log(`Fetching Premium Sources for ${company}...`);
+    const premiumNews = await searchAllPremiumSources(company, { 
+        limit: 5,
+        domain: companyConfig.domain 
+    });
+    allNews = allNews.concat(premiumNews);
+  } catch (error) {
+    console.error(`Error fetching Premium Sources for ${company}:`, error.message);
+  }
+
+  // 3. Fetch from TechCrunch
   try {
     console.log(`Fetching TechCrunch news for ${company}...`);
     const techcrunchNews = await fetchTechCrunchNews(company, { limit: 10 });
@@ -79,29 +90,22 @@ async function fetchNewsForCompany(company) {
     console.error(`Error fetching TechCrunch news for ${company}:`, error.message);
   }
 
-  // 3. Web search for news (DuckDuckGo)
+  // 4. Web search (DuckDuckGo & Bing)
   try {
-    console.log(`Web searching (DuckDuckGo) for ${company} news...`);
-    const searchNews = await searchDuckDuckGo(company, { limit: 15 });
-    allNews = allNews.concat(searchNews);
+    const [ddgNews, bingNews] = await Promise.all([
+        searchDuckDuckGo(company, { limit: 10 }),
+        searchBingNews(company, { limit: 10 })
+    ]);
+    allNews = allNews.concat(ddgNews, bingNews);
   } catch (error) {
     console.error(`Error web searching for ${company}:`, error.message);
-  }
-
-  // 4. Web search for news (Bing News)
-  try {
-    console.log(`Bing News searching for ${company}...`);
-    const bingNews = await searchBingNews(company, { limit: 10 });
-    allNews = allNews.concat(bingNews);
-  } catch (error) {
-    console.error(`Error Bing News searching for ${company}:`, error.message);
   }
 
   return allNews;
 }
 
 async function aggregateAllNews() {
-  console.log('Starting news aggregation with intelligent classification...');
+  console.log('Starting news aggregation with premium sources...');
   const startTime = new Date();
   
   for (const company of COMPANIES) {
@@ -109,7 +113,6 @@ async function aggregateAllNews() {
       console.log(`\n=== Fetching news for ${company.name} ===`);
       const news = await fetchNewsForCompany(company.name);
       if (news.length > 0) {
-        // Apply classification to each article before storing
         const classifiedNews = news.map(article => ({
           ...article,
           category: classifyArticle(article.title, article.description)
@@ -153,7 +156,6 @@ async function storeNews(articles, company) {
           ]
         );
       } else {
-        // Update category if it's currently 'General' or 'news' but we have a better classification
         if (article.category && article.category !== 'General' && article.category !== 'news') {
           await db_helpers.run(
             'UPDATE news SET category = ? WHERE id = ? AND (category = "General" OR category = "news")',
@@ -196,6 +198,11 @@ async function getNews(filters = {}) {
   if (filters.category) {
     sql += ' AND category = ?';
     params.push(filters.category);
+  }
+
+  if (filters.source) {
+    sql += ' AND source = ?';
+    params.push(filters.source);
   }
   
   if (filters.search) {

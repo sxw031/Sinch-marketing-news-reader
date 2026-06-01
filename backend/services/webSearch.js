@@ -4,13 +4,14 @@ const cheerio = require('cheerio');
 const USER_AGENT = process.env.USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
 /**
- * Search for company news using DuckDuckGo
+ * Search for company news using DuckDuckGo with specific site filters
  */
-async function searchDuckDuckGo(company, options = {}) {
+async function searchSiteNews(company, site, sourceName, options = {}) {
   try {
-    console.log(`Searching DuckDuckGo for ${company} news...`);
+    console.log(`Searching ${sourceName} for ${company} news...`);
 
-    const query = `${company} news`;
+    // For official websites, we might use a broader search or specific newsroom paths if known
+    const query = site ? `site:${site} "${company}"` : `"${company}" official news`;
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
 
     const response = await axios.get(url, {
@@ -22,7 +23,7 @@ async function searchDuckDuckGo(company, options = {}) {
     const articles = [];
 
     $('.result').each((index, element) => {
-      if (articles.length >= (options.limit || 20)) return false;
+      if (articles.length >= (options.limit || 5)) return false;
 
       const $el = $(element);
       const titleEl = $el.find('.result__a');
@@ -46,21 +47,14 @@ async function searchDuckDuckGo(company, options = {}) {
       }
 
       if (title && url && !url.includes('duckduckgo.com')) {
-        // Extract domain as source if no clear source found
-        let source = 'Web Search';
-        try {
-            const domain = new URL(url).hostname.replace('www.', '');
-            source = domain.charAt(0).toUpperCase() + domain.slice(1);
-        } catch (e) {}
-
         articles.push({
           title,
           description: description || 'No description available',
           url,
-          source: source,
+          source: sourceName,
           imageUrl: '',
           publishedAt: new Date().toISOString(),
-          author: source,
+          author: sourceName,
           company: company,
           category: 'General'
         });
@@ -69,14 +63,41 @@ async function searchDuckDuckGo(company, options = {}) {
 
     return articles;
   } catch (error) {
-    console.error(`Error searching DuckDuckGo for ${company}:`, error.message);
+    console.error(`Error searching ${sourceName} for ${company}:`, error.message);
     return [];
   }
 }
 
 /**
- * Search Bing News for company-related news
+ * Main search function that aggregates from multiple premium sources
  */
+async function searchAllPremiumSources(company, options = {}) {
+  const premiumSources = [
+    { site: 'linkedin.com', name: 'LinkedIn' },
+    { site: 'nytimes.com', name: 'New York Times' },
+    { site: 'wsj.com', name: 'Wall Street Journal' },
+    { site: 'bloomberg.com', name: 'Bloomberg' }
+  ];
+
+  // Also try to find official website news if domain is provided in options
+  if (options.domain) {
+    premiumSources.push({ site: options.domain, name: 'Official Website' });
+  }
+
+  const allResults = await Promise.all(
+    premiumSources.map(source => searchSiteNews(company, source.site, source.name, options))
+  );
+
+  return allResults.flat();
+}
+
+/**
+ * Legacy search for backward compatibility or general web search
+ */
+async function searchDuckDuckGo(company, options = {}) {
+    return searchSiteNews(company, null, 'Web Search', options);
+}
+
 async function searchBingNews(company, options = {}) {
   try {
     console.log(`Searching Bing News for ${company}...`);
@@ -104,7 +125,6 @@ async function searchBingNews(company, options = {}) {
       let description = descEl.text().trim();
       let rawSource = sourceEl.text().trim() || 'Bing News';
 
-      // Normalize source names (e.g., MSN, 1D, 2D etc are often just noise from Bing)
       let source = rawSource;
       if (source.length <= 3 || /^\d+[DWMY]/.test(source)) {
           source = 'Bing News';
@@ -112,7 +132,6 @@ async function searchBingNews(company, options = {}) {
       if (source.toUpperCase() === 'MSN') source = 'MSN News';
 
       if (!title || !url) return;
-
       if (url.startsWith('/')) url = 'https://www.bing.com' + url;
 
       if (title && url && url.startsWith('http')) {
@@ -137,4 +156,4 @@ async function searchBingNews(company, options = {}) {
   }
 }
 
-module.exports = { searchDuckDuckGo, searchBingNews };
+module.exports = { searchDuckDuckGo, searchBingNews, searchAllPremiumSources };

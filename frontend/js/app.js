@@ -157,11 +157,13 @@ async function loadNews() {
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
         const category = document.getElementById('categoryFilter').value;
+        const source = document.getElementById('sourceFilter').value;
         
         let url = `${API_BASE}?limit=1000`;
         if (start) url += `&startDate=${start}`;
         if (end) url += `&endDate=${end}`;
         if (category) url += `&category=${category}`;
+        if (source) url += `&source=${encodeURIComponent(source)}`;
         if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
 
         const response = await fetch(url);
@@ -204,6 +206,12 @@ function renderNews(isExplicitApply = false) {
     const selectedCategory = document.getElementById('categoryFilter').value;
     if (selectedCategory) {
         filteredNews = filteredNews.filter(n => n.category === selectedCategory);
+    }
+
+    // Source Filter
+    const selectedSource = document.getElementById('sourceFilter').value;
+    if (selectedSource) {
+        filteredNews = filteredNews.filter(n => n.source === selectedSource);
     }
 
     // Search Filter
@@ -348,6 +356,7 @@ function setupEventListeners() {
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('categoryFilter').value = '';
+        document.getElementById('sourceFilter').value = '';
         document.getElementById('searchInput').value = '';
         selectedCompanies = [];
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
