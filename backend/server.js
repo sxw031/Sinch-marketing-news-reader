@@ -66,8 +66,8 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     const msUntilCleanup = tomorrow - now;
     
     setTimeout(() => {
-      cleanupOldNews(30).catch(err => console.error('Cleanup error:', err));
-      setInterval(() => cleanupOldNews(30).catch(err => console.error('Cleanup error:', err)), 24 * 60 * 60 * 1000);
+      cleanupOldNews(180).catch(err => console.error('Cleanup error:', err));
+      setInterval(() => cleanupOldNews(180).catch(err => console.error('Cleanup error:', err)), 24 * 60 * 60 * 1000);
     }, msUntilCleanup);
   };
   

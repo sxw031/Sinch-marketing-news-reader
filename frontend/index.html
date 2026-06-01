@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app">
@@ -29,9 +30,11 @@
                     <div class="search-bar">
                         <input type="text" id="searchInput" placeholder="Search news...">
                     </div>
-                    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+                    <button id="themeToggle" class="btn-theme" title="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
                     <button id="refreshBtn" class="btn-refresh-main">
-                        <span class="refresh-icon">🔄</span>
+                        <i class="fas fa-sync-alt"></i>
                         <span class="refresh-text">Refresh Feed</span>
                     </button>
                 </div>
@@ -70,7 +73,9 @@
                     <span class="stat-item">Updated: <span id="lastUpdated">-</span></span>
                 </div>
                 <div class="filter-actions">
-                    <button id="resetBtn" class="btn-text">Reset Filters</button>
+                    <button id="resetBtn" class="btn-outline">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
                 </div>
             </div>
         </div>

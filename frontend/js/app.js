@@ -8,10 +8,10 @@ let selectedCompanies = [];
 const companyDomains = {
     'HSBC': 'hsbc.com',
     'Grab': 'grab.com',
-    'VGE': 'vgegroup.com',
+    'Vodafone': 'vodafone.com',
     'Cathay Pacific': 'cathaypacific.com',
     'Alibaba': 'alibaba.com',
-    'Charter Bank': 'standardchartered.com',
+    'Standard Chartered': 'sc.com',
     'Temu': 'temu.com',
     'Ctrip': 'trip.com',
     'Didi': 'didiglobal.com',
@@ -154,11 +154,22 @@ function updateSelectionLabel() {
 async function loadNews() {
     showLoading(true);
     try {
-        const response = await fetch(`${API_BASE}?limit=400`);
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const category = document.getElementById('categoryFilter').value;
+        
+        let url = `${API_BASE}?limit=1000`;
+        if (start) url += `&startDate=${start}`;
+        if (end) url += `&endDate=${end}`;
+        if (category) url += `&category=${category}`;
+        if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
+
+        const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
             allNews = data.data || [];
-            renderNews();
+            renderNews(true); // Prioritize Strategic Insights on explicit load
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
         }
     } catch (error) {
         console.error('Error loading news:', error);
@@ -168,7 +179,7 @@ async function loadNews() {
     }
 }
 
-function renderNews() {
+function renderNews(isExplicitApply = false) {
     const newsList = document.getElementById('newsList');
     const emptyState = document.getElementById('emptyState');
     
@@ -204,7 +215,16 @@ function renderNews() {
         );
     }
 
+    // Sorting: Newest first
     filteredNews.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+    // If too many news (e.g. > 100) and not searching, prioritize Strategic Insights
+    if (filteredNews.length > 100 && !search && !selectedCategory && isExplicitApply) {
+        const strategic = filteredNews.filter(n => n.category === 'Strategic Insights');
+        const others = filteredNews.filter(n => n.category !== 'Strategic Insights');
+        // Show all strategic first, then others
+        filteredNews = [...strategic, ...others];
+    }
 
     if (filteredNews.length === 0) {
         newsList.innerHTML = '';
@@ -322,7 +342,7 @@ function setupEventListeners() {
     document.getElementById('searchInput').addEventListener('input', renderNews);
     
     // Explicit Apply Filters for Dates and Category
-    document.getElementById('applyFiltersBtn').addEventListener('click', renderNews);
+    document.getElementById('applyFiltersBtn').addEventListener('click', loadNews);
     
     document.getElementById('resetBtn').addEventListener('click', () => {
         document.getElementById('startDate').value = '';
@@ -331,7 +351,7 @@ function setupEventListeners() {
         document.getElementById('searchInput').value = '';
         selectedCompanies = [];
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
-        renderNews();
+        loadNews(); // Re-fetch default view from server
         renderCompanyGrid();
     });
 
@@ -340,7 +360,10 @@ function setupEventListeners() {
         const next = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
-        document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+        const icon = document.querySelector('#themeToggle i');
+        if (icon) {
+            icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
     });
 
     document.getElementById('closeModal').addEventListener('click', () => {

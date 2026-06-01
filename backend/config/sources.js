@@ -13,7 +13,6 @@ const COMPANIES = [
         date: 'time, .news-date, .published-date'
       }
     },
-    // Updated HSBC RSS link to a more reliable one or removed if broken
     sources: [{type: 'rss', url: 'https://www.hsbc.com/news-and-media/media-releases?rss=1'}]
   },
   {
@@ -33,11 +32,20 @@ const COMPANIES = [
     sources: [{type: 'rss', url: 'https://www.grab.com/sg/press/feed/'}]
   },
   {
-    id: 'vge',
-    name: 'VGE',
-    category: 'Energy',
-    website: null,
-    sources: []
+    id: 'vodafone',
+    name: 'Vodafone',
+    category: 'Telecommunications',
+    website: {
+      url: 'https://www.vodafone.com/news',
+      selectors: {
+        container: 'article, div.news-item',
+        title: 'h2, h3, a',
+        description: 'p',
+        link: 'a',
+        date: 'time, .date'
+      }
+    },
+    sources: [{type: 'rss', url: 'https://www.vodafone.com/news/feed'}]
   },
   {
     id: 'cathay',
@@ -53,7 +61,7 @@ const COMPANIES = [
         date: 'time, .date'
       }
     },
-    sources: [] // Removed potentially broken RSS
+    sources: []
   },
   {
     id: 'alibaba',
@@ -69,14 +77,23 @@ const COMPANIES = [
         date: 'span.date, time'
       }
     },
-    sources: [] // Rely on web search for better reliability
+    sources: []
   },
   {
-    id: 'charter',
-    name: 'Charter Bank',
+    id: 'standard-chartered',
+    name: 'Standard Chartered',
     category: 'Banking',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.sc.com/en/news-and-media/',
+      selectors: {
+        container: 'article, div.news-item',
+        title: 'h2, h3, a',
+        description: 'p',
+        link: 'a',
+        date: 'time, .date'
+      }
+    },
+    sources: [{type: 'rss', url: 'https://www.sc.com/en/feed/'}]
   },
   {
     id: 'temu',
@@ -214,7 +231,7 @@ const COMPANIES = [
     name: 'Binance',
     category: 'Cryptocurrency',
     website: null,
-    sources: [] // Binance RSS is often blocked or requires headers
+    sources: []
   },
   {
     id: 'shopback',
