@@ -38,19 +38,31 @@
         <!-- Secondary Filter Bar -->
         <div class="filter-bar">
             <div class="nav-container">
-                <div class="date-filters">
-                    <div class="date-input-group">
-                        <label for="startDate">From:</label>
-                        <input type="date" id="startDate">
+                <div class="filter-group">
+                    <div class="date-filters">
+                        <div class="date-input-group">
+                            <label for="startDate">From:</label>
+                            <input type="date" id="startDate">
+                        </div>
+                        <div class="date-input-group">
+                            <label for="endDate">To:</label>
+                            <input type="date" id="endDate">
+                        </div>
                     </div>
-                    <div class="date-input-group">
-                        <label for="endDate">To:</label>
-                        <input type="date" id="endDate">
+                    <div class="category-filter-group">
+                        <label for="categoryFilter">Category:</label>
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                            <option value="Strategic Insights">CSM Strategic Insights</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Technology">Technology</option>
+                            <option value="General">General</option>
+                        </select>
                     </div>
                 </div>
                 <div class="quick-stats" id="stats">
                     <span class="stat-item"><strong id="totalArticles">-</strong> Articles</span>
-                    <span class="stat-item"><strong id="totalCompanies">-</strong> Companies</span>
                     <span class="stat-item">Updated: <span id="lastUpdated">-</span></span>
                 </div>
                 <div class="filter-actions">

@@ -160,6 +160,12 @@ function renderNews() {
         filteredNews = filteredNews.filter(n => new Date(n.publishedAt) <= endDateObj);
     }
 
+    // Category Filter
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    if (selectedCategory) {
+        filteredNews = filteredNews.filter(n => n.category === selectedCategory);
+    }
+
     // Search Filter
     const search = document.getElementById('searchInput').value.toLowerCase();
     if (search) {
@@ -192,9 +198,11 @@ function renderNews() {
 function createNewsCard(article) {
     const date = formatDate(article.publishedAt);
     const logoUrl = getLogoUrl(article.company);
+    const isStrategic = article.category === 'Strategic Insights';
+    const categoryBadgeClass = isStrategic ? 'badge-strategic' : 'badge-category';
     
     return `
-        <div class="news-card" data-article='${JSON.stringify(article).replace(/'/g, "&apos;")}'>
+        <div class="news-card ${isStrategic ? 'strategic' : ''}" data-article='${JSON.stringify(article).replace(/'/g, "&apos;")}'>
             <div class="news-card-image-container">
                 <img src="${logoUrl}" alt="${article.company}" class="news-card-logo" onerror="this.src='https://via.placeholder.com/100?text=${encodeURIComponent(article.company)}'">
             </div>
@@ -204,6 +212,7 @@ function createNewsCard(article) {
                 <div class="news-card-meta">
                     <span class="badge badge-company">${article.company}</span>
                     <span class="badge badge-source">${article.source}</span>
+                    <span class="badge ${categoryBadgeClass}">${article.category || 'General'}</span>
                     <span class="news-card-date">${date}</span>
                 </div>
             </div>
@@ -274,10 +283,12 @@ function setupEventListeners() {
     document.getElementById('searchInput').addEventListener('input', renderNews);
     document.getElementById('startDate').addEventListener('change', renderNews);
     document.getElementById('endDate').addEventListener('change', renderNews);
+    document.getElementById('categoryFilter').addEventListener('change', renderNews);
     
     document.getElementById('resetBtn').addEventListener('click', () => {
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('categoryFilter').value = '';
         document.getElementById('searchInput').value = '';
         selectedCompanies = [];
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
