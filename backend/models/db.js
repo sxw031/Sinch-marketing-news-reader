@@ -1,9 +1,20 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/news.db');
+let dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/news.db');
+// Ensure absolute path
+if (!path.isAbsolute(dbPath)) {
+  dbPath = path.resolve(process.cwd(), dbPath);
+}
 const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+try {
+  if (!fs.existsSync(dataDir)) {
+    console.log(`Creating data directory: ${dataDir}`);
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+} catch (e) {
+  console.error(`Error creating data directory: ${e.message}`);
+}
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Database error:', err.message);
   else {
