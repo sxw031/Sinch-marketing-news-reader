@@ -2,7 +2,8 @@ const COMPANIES = [
   {
     id: 'hsbc',
     name: 'HSBC',
-    category: 'Banking & Finance',
+    domain: 'hsbc.com',
+    category: 'Finance',
     website: {
       url: 'https://www.hsbc.com/news',
       selectors: {
@@ -18,7 +19,8 @@ const COMPANIES = [
   {
     id: 'grab',
     name: 'Grab',
-    category: 'Super App',
+    domain: 'grab.com',
+    category: 'Technology',
     website: {
       url: 'https://www.grab.com/press/',
       selectors: {
@@ -34,7 +36,8 @@ const COMPANIES = [
   {
     id: 'vodafone',
     name: 'Vodafone',
-    category: 'Telecommunications',
+    domain: 'vodafone.com',
+    category: 'Technology',
     website: {
       url: 'https://www.vodafone.com/news',
       selectors: {
@@ -50,7 +53,8 @@ const COMPANIES = [
   {
     id: 'cathay',
     name: 'Cathay Pacific',
-    category: 'Airlines',
+    domain: 'cathaypacific.com',
+    category: 'General',
     website: {
       url: 'https://www.cathaypacific.com/cx/en/about-us/press-release.html',
       selectors: {
@@ -66,7 +70,8 @@ const COMPANIES = [
   {
     id: 'alibaba',
     name: 'Alibaba',
-    category: 'E-commerce',
+    domain: 'alibaba.com',
+    category: 'Marketing',
     website: {
       url: 'https://www.alibabagroup.com/en/news',
       selectors: {
@@ -82,7 +87,8 @@ const COMPANIES = [
   {
     id: 'standard-chartered',
     name: 'Standard Chartered',
-    category: 'Banking',
+    domain: 'sc.com',
+    category: 'Finance',
     website: {
       url: 'https://www.sc.com/en/news-and-media/',
       selectors: {
@@ -98,14 +104,16 @@ const COMPANIES = [
   {
     id: 'temu',
     name: 'Temu',
-    category: 'E-commerce',
+    domain: 'temu.com',
+    category: 'Marketing',
     website: null,
     sources: []
   },
   {
     id: 'ctrip',
     name: 'Ctrip',
-    category: 'Travel',
+    domain: 'trip.com',
+    category: 'General',
     website: {
       url: 'https://ir.ctrip.com/news-releases',
       selectors: {
@@ -121,21 +129,24 @@ const COMPANIES = [
   {
     id: 'didi',
     name: 'Didi',
-    category: 'Ride-hailing',
+    domain: 'didiglobal.com',
+    category: 'Technology',
     website: null,
     sources: []
   },
   {
     id: 'pdd',
     name: 'PDD',
-    category: 'E-commerce',
+    domain: 'pinduoduo.com',
+    category: 'Marketing',
     website: null,
     sources: []
   },
   {
     id: 'dbs',
     name: 'DBS',
-    category: 'Banking',
+    domain: 'dbs.com',
+    category: 'Finance',
     website: {
       url: 'https://www.dbs.com/newsroom',
       selectors: {
@@ -151,6 +162,7 @@ const COMPANIES = [
   {
     id: 'tencent',
     name: 'Tencent',
+    domain: 'tencent.com',
     category: 'Technology',
     website: {
       url: 'https://www.tencent.com/en-us/news.html',
@@ -167,7 +179,8 @@ const COMPANIES = [
   {
     id: 'bankofchina',
     name: 'Bank of China',
-    category: 'Banking',
+    domain: 'boc.cn',
+    category: 'Finance',
     website: {
       url: 'https://www.boc.cn/en/index.html',
       selectors: {
@@ -183,6 +196,7 @@ const COMPANIES = [
   {
     id: 'bytedance',
     name: 'ByteDance',
+    domain: 'bytedance.com',
     category: 'Technology',
     website: null,
     sources: []
@@ -190,14 +204,16 @@ const COMPANIES = [
   {
     id: 'gojek',
     name: 'Gojek',
-    category: 'Super App',
+    domain: 'gojek.com',
+    category: 'Technology',
     website: null,
     sources: []
   },
   {
     id: 'citigroup',
     name: 'Citigroup',
-    category: 'Banking',
+    domain: 'citigroup.com',
+    category: 'Finance',
     website: {
       url: 'https://www.citigroup.com/citi/news',
       selectors: {
@@ -213,7 +229,8 @@ const COMPANIES = [
   {
     id: 'gov-singapore',
     name: 'Government of Singapore',
-    category: 'Government',
+    domain: 'gov.sg',
+    category: 'General',
     website: {
       url: 'https://www.gov.sg/news',
       selectors: {
@@ -229,21 +246,24 @@ const COMPANIES = [
   {
     id: 'binance',
     name: 'Binance',
-    category: 'Cryptocurrency',
+    domain: 'binance.com',
+    category: 'Finance',
     website: null,
     sources: []
   },
   {
     id: 'shopback',
     name: 'ShopBack',
-    category: 'Fintech',
+    domain: 'shopback.com',
+    category: 'Marketing',
     website: null,
     sources: []
   },
   {
     id: 'aeoncredit',
     name: 'Aeon Credit',
-    category: 'Financial Services',
+    domain: 'aeoncredit.com.my',
+    category: 'Finance',
     website: null,
     sources: []
   }

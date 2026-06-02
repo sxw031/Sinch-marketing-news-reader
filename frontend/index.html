@@ -44,6 +44,14 @@
         <!-- Secondary Filter Bar -->
         <div class="filter-bar">
             <div class="nav-container">
+                <div class="quick-time-filters">
+                    <button class="btn-quick-time" data-range="3h">3h</button>
+                    <button class="btn-quick-time" data-range="24h">24h</button>
+                    <button class="btn-quick-time" data-range="48h">48h</button>
+                    <button class="btn-quick-time" data-range="1w">1w</button>
+                    <button class="btn-quick-time" data-range="1m">1m</button>
+                    <button class="btn-quick-time" data-range="3m">3m</button>
+                </div>
                 <div class="filter-group">
                     <div class="date-filters">
                         <div class="date-input-group">
@@ -75,7 +83,8 @@
                             <option value="New York Times">New York Times</option>
                             <option value="Wall Street Journal">Wall Street Journal</option>
                             <option value="Bloomberg">Bloomberg</option>
-                            <option value="TechCrunch">TechCrunch</option>
+<option value="DW">DW</option>
+<option value="TechCrunch">TechCrunch</option>
                         </select>
                     </div>
                     <button id="applyFiltersBtn" class="btn-apply-filters">Apply Filters</button>
@@ -85,6 +94,9 @@
                     <span class="stat-item">Updated: <span id="lastUpdated">-</span></span>
                 </div>
                 <div class="filter-actions">
+                    <button id="generateReportBtn" class="btn-special" title="Generate CSM Strategy Report">
+                        <i class="fas fa-file-alt"></i> Generate Strategy
+                    </button>
                     <button id="resetBtn" class="btn-outline">
                         <i class="fas fa-undo"></i> Reset
                     </button>
@@ -140,6 +152,46 @@
         <div class="modal-content">
             <span class="close" id="closeModal">&times;</span>
             <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- AI Chat Floating Button & Window -->
+    <div id="aiChatWrapper">
+        <div id="aiChatWindow" class="ai-chat-window" style="display: none;">
+            <div class="ai-chat-header">
+                <span>🤖 MarketFeed AI Assistant</span>
+                <span id="closeAiChat" class="close-chat">&times;</span>
+            </div>
+            <div id="aiChatMessages" class="ai-chat-messages">
+                <div class="ai-message bot">Hello! I'm your MarketFeed AI. I can analyze the news for you. Ask me anything about your companies!</div>
+            </div>
+            <div class="ai-chat-input-area">
+                <input type="text" id="aiChatInput" placeholder="Ask about companies or news...">
+                <button id="sendAiMessage"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <button id="aiChatToggle" class="ai-chat-toggle" title="AI Search & Chat">
+            <i class="fas fa-robot"></i>
+        </button>
+    </div>
+
+    <!-- Strategy Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content report-modal">
+            <div class="modal-header">
+                <h2>CSM Strategic Insights & Strategy Plan</h2>
+                <span class="close" id="closeReportModal">&times;</span>
+            </div>
+            <div id="reportContent" class="report-content">
+                <!-- AI generated report will be injected here -->
+                <div class="report-loading">
+                    <div class="spinner"></div>
+                    <p>AI is analyzing CSM Strategic Insights and crafting your strategy...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="downloadReportBtn" class="btn-primary">Download Strategy Report</button>
+            </div>
         </div>
     </div>
 

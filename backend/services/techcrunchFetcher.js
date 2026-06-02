@@ -16,14 +16,7 @@ async function fetchTechCrunchNews(company, options = {}) {
         (item.categories && item.categories.some(cat => cat.toLowerCase().includes(companyLower)))
       );
 
-    // If no specific company news, take the most recent general tech news as fallback 
-    // but mark them clearly or limit them
-    if (filteredArticles.length === 0) {
-      console.log(`No direct TechCrunch matches for ${company}, taking top general news.`);
-      filteredArticles = (feed.items || []).slice(0, 3);
-    } else {
-      filteredArticles = filteredArticles.slice(0, options.limit || 15);
-    }
+    filteredArticles = filteredArticles.slice(0, options.limit || 15);
 
     return filteredArticles.map(item => ({
       title: item.title || 'Untitled',
@@ -34,7 +27,7 @@ async function fetchTechCrunchNews(company, options = {}) {
       publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
       author: item.author || 'TechCrunch',
       company: company,
-      category: 'technology'
+      category: 'Technology'
     }));
   } catch (error) {
     console.error(`Error fetching TechCrunch RSS for ${company}:`, error.message);

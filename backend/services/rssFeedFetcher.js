@@ -24,9 +24,10 @@ async function fetchRSSFeed(feedUrl, company) {
     const contentType = response.headers['content-type'] || '';
     const data = response.data;
 
-    // Basic check if the response is actually XML/RSS
-    if (typeof data !== 'string' || (!data.trim().startsWith('<?xml') && !data.trim().startsWith('<rss'))) {
-      console.warn(`[RSS Warning] ${company} source is not valid XML. Skipping...`);
+    // Basic check if the response is actually XML/RSS/Atom
+    const trimmedData = (data || '').toString().trim();
+    if (typeof data !== 'string' || (!trimmedData.startsWith('<?xml') && !trimmedData.startsWith('<rss') && !trimmedData.startsWith('<feed'))) {
+      console.warn(`[RSS Warning] ${company} source is not valid XML/RSS/Atom. Skipping...`);
       return [];
     }
 

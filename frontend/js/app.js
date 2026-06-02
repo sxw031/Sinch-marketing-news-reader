@@ -151,26 +151,44 @@ function updateSelectionLabel() {
     }
 }
 
-async function loadNews() {
+async function loadNews(isExplicitRefresh = false) {
     showLoading(true);
     try {
         const start = document.getElementById('startDate').value;
         const end = document.getElementById('endDate').value;
         const category = document.getElementById('categoryFilter').value;
         const source = document.getElementById('sourceFilter').value;
+        const search = document.getElementById('searchInput').value;
         
+        // If it's an explicit refresh, we trigger the background aggregation first
+        if (isExplicitRefresh) {
+            console.log('Triggering contextual background aggregation...');
+            // We can pass current filters to the backend to optimize the crawl (future enhancement)
+            await fetch(`${API_BASE}/aggregate`, { method: 'POST' });
+            // Wait a bit for the background process to start finding things
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
         let url = `${API_BASE}?limit=1000`;
-        if (start) url += `&startDate=${start}`;
-        if (end) url += `&endDate=${end}`;
-        if (category) url += `&category=${category}`;
-        if (source) url += `&source=${encodeURIComponent(source)}`;
-        if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
+        
+        // Default View: If no filters are set, only show news from today
+        if (!start && !end && !category && !source && !search && selectedCompanies.length === 0) {
+            const today = new Date().toISOString().split('T')[0];
+            url += `&startDate=${today}`;
+        } else {
+            if (start) url += `&startDate=${start}`;
+            if (end) url += `&endDate=${end}`;
+            if (category) url += `&category=${category}`;
+            if (source) url += `&source=${encodeURIComponent(source)}`;
+            if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+        }
 
         const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
             allNews = data.data || [];
-            renderNews(true); // Prioritize Strategic Insights on explicit load
+            renderNews(true);
             document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
         }
     } catch (error) {
@@ -346,22 +364,143 @@ function setupEventListeners() {
         document.querySelectorAll('.company-item').forEach(item => item.classList.remove('selected'));
     });
 
-    document.getElementById('refreshBtn').addEventListener('click', loadNews);
+    document.getElementById('refreshBtn').addEventListener('click', () => loadNews(true));
     document.getElementById('searchInput').addEventListener('input', renderNews);
     
     // Explicit Apply Filters for Dates and Category
-    document.getElementById('applyFiltersBtn').addEventListener('click', loadNews);
-    
+    document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
+
+    // Quick Time Filters
+    document.querySelectorAll('.btn-quick-time').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const range = btn.dataset.range;
+            const now = new Date();
+            let start = new Date();
+
+            switch(range) {
+                case '3h': start.setHours(now.getHours() - 3); break;
+                case '24h': start.setHours(now.getHours() - 24); break;
+                case '48h': start.setHours(now.getHours() - 48); break;
+                case '1w': start.setDate(now.getDate() - 7); break;
+                case '1m': start.setMonth(now.getMonth() - 1); break;
+                case '3m': start.setMonth(now.getMonth() - 3); break;
+            }
+
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            document.getElementById('endDate').value = now.toISOString().split('T')[0];
+            loadNews();
+        });
+    });
+
     document.getElementById('resetBtn').addEventListener('click', () => {
         document.getElementById('startDate').value = '';
         document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('categoryFilter').value = '';
         document.getElementById('sourceFilter').value = '';
         document.getElementById('searchInput').value = '';
+        document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
         selectedCompanies = [];
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
         loadNews(); // Re-fetch default view from server
         renderCompanyGrid();
+    });
+
+    // AI Chat Interaction
+    const aiChatToggle = document.getElementById('aiChatToggle');
+    const aiChatWindow = document.getElementById('aiChatWindow');
+    const closeAiChat = document.getElementById('closeAiChat');
+    const aiChatInput = document.getElementById('aiChatInput');
+    const sendAiMessage = document.getElementById('sendAiMessage');
+    const aiChatMessages = document.getElementById('aiChatMessages');
+
+    aiChatToggle.addEventListener('click', () => {
+        aiChatWindow.style.display = aiChatWindow.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    closeAiChat.addEventListener('click', () => {
+        aiChatWindow.style.display = 'none';
+    });
+
+    async function handleAiChat() {
+        const query = aiChatInput.value.trim();
+        if (!query) return;
+
+        // Add user message
+        appendAiMessage('user', query);
+        aiChatInput.value = '';
+
+        // Show typing indicator
+        const botMsgDiv = appendAiMessage('bot', 'Thinking...');
+
+        try {
+            const response = await fetch(`${API_BASE}/ai/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, context: allNews.slice(0, 20) }) // Send top news as context
+            });
+            const data = await response.json();
+            botMsgDiv.textContent = data.answer || "I'm sorry, I couldn't process that.";
+        } catch (error) {
+            botMsgDiv.textContent = "Error connecting to AI assistant.";
+        }
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+    }
+
+    sendAiMessage.addEventListener('click', handleAiChat);
+    aiChatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleAiChat(); });
+
+    function appendAiMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `ai-message ${role}`;
+        msgDiv.textContent = text;
+        aiChatMessages.appendChild(msgDiv);
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+        return msgDiv;
+    }
+
+    // Strategy Report Generation
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const reportModal = document.getElementById('reportModal');
+    const closeReportModal = document.getElementById('closeReportModal');
+    const reportContent = document.getElementById('reportContent');
+
+    generateReportBtn.addEventListener('click', async () => {
+        reportModal.style.display = 'block';
+        reportContent.innerHTML = '<div class="report-loading"><div class="spinner"></div><p>AI is analyzing CSM Strategic Insights and crafting your strategy...</p></div>';
+        
+        try {
+            const strategicNews = allNews.filter(n => n.category === 'Strategic Insights');
+            const response = await fetch(`${API_BASE}/ai/strategy`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ news: strategicNews })
+            });
+            const data = await response.json();
+            if (data.success) {
+                reportContent.innerHTML = `<div class="report-text">${data.report.replace(/\n/g, '<br>')}</div>`;
+            } else {
+                reportContent.innerHTML = '<p>Failed to generate report. Please try again.</p>';
+            }
+        } catch (error) {
+            reportContent.innerHTML = '<p>Error connecting to strategy engine.</p>';
+        }
+    });
+
+    closeReportModal.addEventListener('click', () => {
+        reportModal.style.display = 'none';
+    });
+
+    document.getElementById('downloadReportBtn').addEventListener('click', () => {
+        const content = reportContent.innerText;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Sinch_Strategy_Report_${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
     });
 
     document.getElementById('themeToggle').addEventListener('click', () => {
