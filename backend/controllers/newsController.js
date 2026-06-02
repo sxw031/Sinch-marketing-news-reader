@@ -38,12 +38,30 @@ function getCompanies(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 }
+let isAggregating = false;
+
 async function triggerAggregation(req, res) {
   try {
+    if (isAggregating) {
+      return res.json({ success: true, message: 'Aggregation is already in progress' });
+    }
+
+    isAggregating = true;
     res.json({ success: true, message: 'News aggregation started in background' });
-    aggregateAllNews().catch(error => { console.error('Error in background aggregation:', error); });
+    
+    // Run in background
+    (async () => {
+      try {
+        await aggregateAllNews();
+      } catch (error) {
+        console.error('Error in background aggregation:', error);
+      } finally {
+        isAggregating = false;
+      }
+    })();
   } catch (error) {
     console.error('Error triggering aggregation:', error);
+    isAggregating = false;
     res.status(500).json({ success: false, error: error.message });
   }
 }

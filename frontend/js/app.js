@@ -253,10 +253,9 @@ function renderNews(isExplicitApply = false) {
     }
 
     if (filteredNews.length === 0) {
-        newsList.innerHTML = '';
-        emptyState.style.display = 'block';
+        showEmptyState(true);
     } else {
-        emptyState.style.display = 'none';
+        showEmptyState(false);
         newsList.innerHTML = filteredNews.map(article => createNewsCard(article)).join('');
         
         document.querySelectorAll('.news-card').forEach(card => {
@@ -559,4 +558,20 @@ function showError(message) {
     const emptyState = document.getElementById('emptyState');
     emptyState.querySelector('p').textContent = message;
     emptyState.style.display = 'block';
+}
+
+function showEmptyState(isEmpty) {
+    const emptyState = document.getElementById('emptyState');
+    const newsList = document.getElementById('newsList');
+    if (isEmpty) {
+        newsList.innerHTML = '';
+        emptyState.style.display = 'block';
+        // If it's the very first load, give a more helpful message
+        if (allNews.length === 0) {
+            emptyState.querySelector('h3').textContent = "Initializing Feed...";
+            emptyState.querySelector('p').innerHTML = "We're currently aggregating the latest news for your selected companies. <br>This usually takes a few minutes on first launch. <br><br><button onclick='location.reload()' class='btn-outline' style='margin: 0 auto;'>Check Again</button>";
+        }
+    } else {
+        emptyState.style.display = 'none';
+    }
 }

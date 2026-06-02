@@ -122,6 +122,9 @@ async function aggregateAllNews() {
       } else {
         console.log(`⚠ No articles found for ${company.name}`);
       }
+      
+      // Small delay between companies to be polite to sources
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error(`Error aggregating news for ${company.name}:`, error.message);
     }
