@@ -101,18 +101,17 @@ async function fetchNewsForCompany(company) {
 async function aggregateAllNews(options = {}) {
   const isStrategicOnly = options.strategicOnly !== false;
   const { onProgress, onError } = options;
-  console.log(`Starting EXTREME news aggregation with TaskCoordinator (Concurrency: 10)...`);
+  console.log(`Starting ULTRA-FAST news aggregation with Pipeline (Concurrency: 10)...`);
   const startTime = new Date();
   
-  // Extreme Performance: Concurrency 10 for Render Free Tier
-  // We use a small delay between tasks within a batch to prevent CPU spikes
+  // Pipeline Performance: Concurrency 10 with internal task splitting
   const BATCH_SIZE = 10; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
     await Promise.all(batch.map(async (company, index) => {
-      // Staggered start within batch (200ms) to spread CPU load
-      await new Promise(r => setTimeout(r, index * 200));
+      // Staggered start to smooth out CPU spikes
+      await new Promise(r => setTimeout(r, index * 150));
       
       try {
         if (onProgress) onProgress(company.name);
@@ -129,7 +128,8 @@ async function aggregateAllNews(options = {}) {
           }
 
           if (processedNews.length > 0) {
-            await storeNews(processedNews, company.name);
+            // ULTRA-FAST: Use batch transaction for each company's results
+            await storeNewsBatch(processedNews, company.name);
           }
         }
       } catch (error) {
@@ -138,72 +138,65 @@ async function aggregateAllNews(options = {}) {
       }
     }));
     
-    // Memory Guard: Small pause to allow GC to run on Render Free
+    // Allow Render Free Tier to breathe
     if (i + BATCH_SIZE < COMPANIES.length) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       if (global.gc) global.gc(); 
     }
   }
   
   const duration = new Date() - startTime;
-  console.log(`\n✅ Extreme Sync finished in ${Math.round(duration/1000)}s`);
+  console.log(`\n✅ Ultra-Fast Sync finished in ${Math.round(duration/1000)}s`);
 }
 
-async function storeNews(articles, company) {
-  for (const article of articles) {
-    try {
-      // Use URL as unique identifier to prevent duplicates more reliably
-      const existing = await db_helpers.get(
-        'SELECT id, publishedAt FROM news WHERE url = ?',
-        [article.url]
-      );
+/**
+ * High-performance batch storage using SQLite transactions
+ */
+async function storeNewsBatch(articles, company) {
+  const { db } = require('../models/db');
+  
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
       
-      // Strict Source Date Parsing: Default to NULL if not found in source
-      let isoDate = null;
-      if (article.publishedAt) {
+      const stmt = db.prepare(`
+        INSERT INTO news (company, title, description, url, source, imageUrl, category, publishedAt, author) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(url) DO UPDATE SET
+          category = excluded.category,
+          source = excluded.source,
+          publishedAt = COALESCE(excluded.publishedAt, news.publishedAt)
+      `);
+
+      for (const article of articles) {
+        let isoDate = null;
+        if (article.publishedAt) {
           const parsedDate = new Date(article.publishedAt);
           if (!isNaN(parsedDate.getTime())) {
-              isoDate = parsedDate.toISOString().replace('Z', '');
+            isoDate = parsedDate.toISOString().replace('Z', '');
           }
+        }
+
+        stmt.run([
+          article.company || company,
+          article.title,
+          article.description || '',
+          article.url,
+          article.source,
+          article.imageUrl || '',
+          article.category || 'General',
+          isoDate,
+          article.author || 'Unknown'
+        ]);
       }
 
-      if (!existing) {
-        await db_helpers.run(
-          `INSERT INTO news (company, title, description, url, source, imageUrl, category, publishedAt, author) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            article.company || company,
-            article.title,
-            article.description || '',
-            article.url,
-            article.source,
-            article.imageUrl || '',
-            article.category || 'General',
-            isoDate, // Can be NULL now
-            article.author || 'Unknown'
-          ]
-        );
-      } else {
-        // Only update publishedAt if we actually found a valid date in this crawl
-        const updateFields = [article.category || 'General', article.source];
-        let updateSql = 'UPDATE news SET category = ?, source = ?';
-        
-        if (isoDate) {
-            updateSql += ', publishedAt = ?';
-            updateFields.push(isoDate);
-        }
-        
-        updateSql += ' WHERE id = ?';
-        updateFields.push(existing.id);
-        
-        await db_helpers.run(updateSql, updateFields);
-      }
-    } catch (error) {
-      if (!error.message.includes('UNIQUE constraint failed')) {
-        console.error('Error storing article:', error.message);
-      }
-    }
-  }
+      stmt.finalize();
+      db.run("COMMIT", (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  });
 }
 
 async function getNews(filters = {}) {

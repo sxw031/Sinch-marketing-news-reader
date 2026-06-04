@@ -279,8 +279,8 @@ function setupEventListeners() {
 
     document.getElementById('refreshBtn').addEventListener('click', () => triggerAggregation(false));
     document.getElementById('fetchAllBtn').addEventListener('click', () => triggerAggregation(true));
-    document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
-    document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(); });
+    document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews(false, false));
+    document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(false, false); });
 
     // Logo click to reset everything and show all with default 24h filter
     document.querySelector('.logo').addEventListener('click', (e) => {
@@ -616,28 +616,35 @@ async function loadNews(isExplicitRefresh = false, isSilent = false) {
             return;
         }
 
-        let url = `${API_BASE}?limit=2000`; // Increased limit for full historical view
+        // Optimized limit for faster initial load
+        let url = `${API_BASE}?limit=1500`; 
         
-        // Precise Time Filtering: Always ensure we use the selected time range
+        // Time Filter
         if (activeTimeRange) {
-            // Convert to local ISO string for backend comparison
             const startDate = new Date(activeTimeRange);
             const isoDate = startDate.toISOString().replace('Z', '');
             url += `&startDate=${encodeURIComponent(isoDate)}`;
         }
         
+        // Dynamic Filter parameters
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (source) url += `&source=${encodeURIComponent(source)}`;
         if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
-        console.log('Fetching insights for range:', activeTimeRange);
+        console.log(`Loading news [Source: ${source || 'All'}, Range: ${activeTimeRange || 'All'}]`);
+        
         const response = await fetch(url);
         const data = await response.json();
         
         if (data.success) {
             allNews = data.data || [];
             renderNews();
+            if (allNews.length === 0 && !isSilent) {
+                showEmptyState(true);
+            } else {
+                showEmptyState(false);
+            }
         }
     } catch (error) {
         console.error('Error loading news:', error);

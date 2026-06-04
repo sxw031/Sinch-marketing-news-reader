@@ -108,15 +108,13 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
 
           if (title && link && !link.includes('duckduckgo.com') && isTargetSite) {
             if (!articles.some(a => a.url === link)) {
-              let finalSource = sourceName;
+              // Precise Source Classification
+              let finalSource = 'Web Search'; // Default for generic results
+              
               if (link.toLowerCase().includes('linkedin.com')) {
                 finalSource = 'LinkedIn';
-              } else if (sourceName === 'Web Search') {
-                try {
-                  const urlObj = new URL(link);
-                  const hostname = urlObj.hostname.replace('www.', '');
-                  finalSource = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-                } catch (e) {}
+              } else if (sourceName === 'Official Website' || (options.domain && link.toLowerCase().includes(options.domain.toLowerCase()))) {
+                finalSource = 'Official Website';
               }
 
               // Enhanced Time Extraction for LinkedIn/Web: Default to null if not found
