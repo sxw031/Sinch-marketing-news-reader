@@ -11,7 +11,7 @@ const companyDomains = {
     'Grab': 'grab.com',
     'Vodafone': 'vodafone.com',
     'Cathay Pacific': 'cathaypacific.com',
-    'Alibaba': 'alibabagroup.com',
+    'Alibaba': 'alibaba.com',
     'Standard Chartered': 'sc.com',
     'Temu': 'temu.com',
     'Ctrip': 'trip.com',
