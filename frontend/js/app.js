@@ -265,7 +265,8 @@ function setupEventListeners() {
         selectorModal.style.display = 'none';
         document.body.style.overflow = '';
         updateSelectionLabel();
-        loadNews();
+        // Zero-wait: load from DB immediately based on selection
+        loadNews(false, false);
     });
 
     document.getElementById('selectAllBtn').addEventListener('click', () => {
@@ -489,9 +490,12 @@ async function triggerAggregation(isFull = false) {
     const btn = isFull ? document.getElementById('fetchAllBtn') : document.getElementById('refreshBtn');
     const originalText = btn ? btn.querySelector('span').textContent : '';
     
+    // Non-blocking: Update existing news immediately while syncing in background
+    loadNews(false, false);
+
     if (btn) {
         btn.disabled = true;
-        btn.querySelector('span').textContent = 'Processing...';
+        btn.querySelector('i').classList.add('fa-spin');
     }
 
     try {
@@ -501,17 +505,17 @@ async function triggerAggregation(isFull = false) {
         if (data.success) {
             startStatusPolling(btn, originalText);
         } else {
-            alert('Failed to start aggregation: ' + data.message);
+            console.error('Failed to start aggregation:', data.message);
             if (btn) {
                 btn.disabled = false;
-                btn.querySelector('span').textContent = originalText;
+                btn.querySelector('i').classList.remove('fa-spin');
             }
         }
     } catch (error) {
         console.error('Error triggering aggregation:', error);
         if (btn) {
             btn.disabled = false;
-            btn.querySelector('span').textContent = originalText;
+            btn.querySelector('i').classList.remove('fa-spin');
         }
     }
 }
@@ -519,21 +523,11 @@ async function triggerAggregation(isFull = false) {
 function startStatusPolling(btn, originalText) {
     if (statusPollingInterval) clearInterval(statusPollingInterval);
     
-    const loadingOverlay = document.getElementById('loadingSpinner');
-    const statusText = document.createElement('p');
-    statusText.id = 'pollingStatus';
-    statusText.style.textAlign = 'center';
-    statusText.style.marginTop = '10px';
-    statusText.style.fontWeight = 'bold';
-    statusText.style.color = 'var(--primary)';
+    const syncBar = document.getElementById('syncStatusBar');
+    const syncText = document.getElementById('syncStatusText');
+    const syncProgress = document.getElementById('syncProgressBar');
     
-    if (loadingOverlay) {
-        const existingStatus = document.getElementById('pollingStatus');
-        if (existingStatus) existingStatus.remove();
-        loadingOverlay.appendChild(statusText);
-    }
-    
-    showLoading(true);
+    if (syncBar) syncBar.style.display = 'block';
     
     statusPollingInterval = setInterval(async () => {
         try {
@@ -543,28 +537,27 @@ function startStatusPolling(btn, originalText) {
             if (data.success && data.status.inProgress) {
                 const status = data.status;
                 const progress = Math.round((status.completedCompanies.length / status.totalCompanies) * 100);
-                statusText.textContent = `Scraping: ${status.currentCompany || 'Starting...'} (${progress}%)`;
                 
-                // Real-time update: load news every time a company is completed
-                if (status.completedCompanies.length > 0) {
-                    await loadNews(false, true); // silent load
-                }
+                if (syncText) syncText.textContent = `Syncing: ${status.currentCompany || 'Initializing...'} (${progress}%)`;
+                if (syncProgress) syncProgress.style.width = `${progress}%`;
+                
+                // Silent background update
+                await loadNews(false, true);
             } else {
                 clearInterval(statusPollingInterval);
                 statusPollingInterval = null;
-                if (statusText) statusText.remove();
-                showLoading(false);
                 
+                if (syncBar) syncBar.style.display = 'none';
                 if (btn) {
                     btn.disabled = false;
-                    btn.querySelector('span').textContent = originalText;
+                    btn.querySelector('i').classList.remove('fa-spin');
                 }
-                await loadNews(); // Final load
+                await loadNews(false, false); // Final update
             }
         } catch (error) {
             console.error('Polling error:', error);
         }
-    }, 2000);
+    }, 3000); // Poll every 3s to save resources on Render Free
 }
 
 async function loadNews(isExplicitRefresh = false, isSilent = false) {

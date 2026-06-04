@@ -587,3 +587,46 @@ body {
     .ai-chat-window { width: calc(100% - 3rem); right: 1.5rem; }
     .modal-content { width: calc(100% - 2rem); margin: 5vh 1rem; padding: 2rem; }
 }
+
+/* Sync Status Bar (Non-blocking) */
+.sync-status-bar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 0;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.sync-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.sync-progress-mini {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-body);
+    border-radius: 2px;
+    overflow: hidden;
+    max-width: 200px;
+}
+
+.sync-progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.5s ease;
+}
+
+/* Override existing loading for non-blocking */
+.loading {
+    padding: 3rem;
+    text-align: center;
+}
