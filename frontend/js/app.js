@@ -241,7 +241,11 @@ function showArticleModal(article) {
             <span class="news-card-date">${formatDate(article.publishedAt)}</span>
         </div>
         <div style="font-size: 1.05rem; line-height: 1.7; color: var(--text-main); margin-bottom: 2.5rem;">${escapeHtml(article.description || 'No description available')}</div>
-        <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-text btn-refresh" style="text-decoration: none; justify-content: center; padding: 1rem;">View Original Source <i class="fas fa-external-link-alt"></i></a>
+        <div style="display: flex; justify-content: center; margin-top: 1rem;">
+            <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-text btn-refresh" style="text-decoration: none; display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 30px; background: var(--primary); color: white; font-weight: 600;">
+                View Original Source <i class="fas fa-external-link-alt"></i>
+            </a>
+        </div>
     `;
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
