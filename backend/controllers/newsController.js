@@ -209,4 +209,4 @@ function getAggregationStatusEndpoint(req, res) {
     res.json({ success: true, data: aggregationStatus });
 }
 
-module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus, getPodcast, getAggregationStatusEndpoint };
+module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus, getPodcast, getReportSpeech, getAggregationStatusEndpoint };
