@@ -468,13 +468,13 @@ function updateStats(count) {
 }
 
 function formatDate(dateString) {
-    if (!dateString) return 'Just now';
+    // If no date provided (null/undefined), return empty string to "leave it blank"
+    if (!dateString) return '';
     
-    // Ensure we handle various date formats correctly
     const date = new Date(dateString);
     
-    // If invalid date, return a fallback
-    if (isNaN(date.getTime())) return 'Recently';
+    // If invalid date, return empty string
+    if (isNaN(date.getTime())) return '';
     
     const now = new Date();
     const diff = now - date;
@@ -501,6 +501,18 @@ function formatDate(dateString) {
     if (diff < 604800000) {
         const days = Math.floor(diff / 86400000);
         return `${days}d ago`;
+    }
+
+    // Less than 30 days (Weeks)
+    if (diff < 2592000000) {
+        const weeks = Math.floor(diff / 604800000);
+        return `${weeks}w ago`;
+    }
+
+    // Less than 1 year (Months)
+    if (diff < 31536000000) {
+        const months = Math.floor(diff / 2592000000);
+        return `${months}mo ago`;
     }
     
     // Default to date string

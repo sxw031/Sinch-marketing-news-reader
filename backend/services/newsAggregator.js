@@ -158,15 +158,14 @@ async function storeNews(articles, company) {
         [article.url]
       );
       
-      // Precise Source Date Parsing
-      let sourceDate = new Date();
+      // Strict Source Date Parsing: Default to NULL if not found in source
+      let isoDate = null;
       if (article.publishedAt) {
           const parsedDate = new Date(article.publishedAt);
           if (!isNaN(parsedDate.getTime())) {
-              sourceDate = parsedDate;
+              isoDate = parsedDate.toISOString().replace('Z', '');
           }
       }
-      const isoDate = sourceDate.toISOString().replace('Z', '');
 
       if (!existing) {
         await db_helpers.run(
@@ -180,21 +179,24 @@ async function storeNews(articles, company) {
             article.source,
             article.imageUrl || '',
             article.category || 'General',
-            isoDate,
+            isoDate, // Can be NULL now
             article.author || 'Unknown'
           ]
         );
       } else {
-        // Update existing entry with better data if found
-        await db_helpers.run(
-          'UPDATE news SET category = ?, source = ?, publishedAt = ? WHERE id = ?',
-          [
-              article.category || 'General',
-              article.source,
-              isoDate,
-              existing.id
-          ]
-        );
+        // Only update publishedAt if we actually found a valid date in this crawl
+        const updateFields = [article.category || 'General', article.source];
+        let updateSql = 'UPDATE news SET category = ?, source = ?';
+        
+        if (isoDate) {
+            updateSql += ', publishedAt = ?';
+            updateFields.push(isoDate);
+        }
+        
+        updateSql += ' WHERE id = ?';
+        updateFields.push(existing.id);
+        
+        await db_helpers.run(updateSql, updateFields);
       }
     } catch (error) {
       if (!error.message.includes('UNIQUE constraint failed')) {

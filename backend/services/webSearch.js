@@ -119,10 +119,10 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 } catch (e) {}
               }
 
-              // Enhanced Time Extraction for LinkedIn/Web
-              let publishedAt = new Date().toISOString().replace('Z', '');
+              // Enhanced Time Extraction for LinkedIn/Web: Default to null if not found
+              let publishedAt = null;
               
-              // Look for time indicators in description (e.g., "3 hours ago", "2 days ago")
+              // Look for time indicators in description (e.g., "3 hours ago", "2 days ago", "1 week ago")
               const timeMatch = description.match(/(\d+)\s+(minute|hour|day|week|month)s?\s+ago/i);
               if (timeMatch) {
                 const amount = parseInt(timeMatch[1]);
@@ -134,6 +134,16 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 else if (unit.includes('week')) date.setDate(date.getDate() - amount * 7);
                 else if (unit.includes('month')) date.setMonth(date.getMonth() - amount);
                 publishedAt = date.toISOString().replace('Z', '');
+              } else {
+                // Try to find date patterns like "May 20, 2024" or "2024-05-20"
+                const dateMatch = description.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i) || 
+                                 description.match(/\d{4}-\d{2}-\d{2}/);
+                if (dateMatch) {
+                  const parsedDate = new Date(dateMatch[0]);
+                  if (!isNaN(parsedDate.getTime())) {
+                    publishedAt = parsedDate.toISOString().replace('Z', '');
+                  }
+                }
               }
 
               articles.push({
@@ -142,7 +152,7 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 url: link,
                 source: finalSource,
                 imageUrl: '',
-                publishedAt: publishedAt,
+                publishedAt: publishedAt, // NULL if no time info found
                 author: finalSource,
                 company: company,
                 category: 'General'
