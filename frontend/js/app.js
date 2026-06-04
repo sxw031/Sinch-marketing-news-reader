@@ -11,22 +11,22 @@ const companyDomains = {
     'Grab': 'grab.com',
     'Vodafone': 'vodafone.com',
     'Cathay Pacific': 'cathaypacific.com',
-    'Alibaba': 'alibaba.com',
+    'Alibaba': 'alibabagroup.com',
     'Standard Chartered': 'sc.com',
     'Temu': 'temu.com',
     'Ctrip': 'trip.com',
     'Didi': 'didiglobal.com',
-    'PDD': 'pinduoduo.com',
     'DBS': 'dbs.com',
     'Tencent': 'tencent.com',
     'Bank of China': 'boc.cn',
     'ByteDance': 'bytedance.com',
     'Gojek': 'gojek.com',
     'Citigroup': 'citigroup.com',
-    'Government of Singapore': 'gov.sg',
     'Binance': 'binance.com',
     'ShopBack': 'shopback.com',
-    'Aeon Credit': 'aeoncredit.com.my'
+    'Aeon Credit': 'aeoncredit.com.my',
+    'Shopee': 'shopee.com',
+    'Foodpanda': 'foodpanda.com'
 };
 
 document.addEventListener('DOMContentLoaded', async () => {

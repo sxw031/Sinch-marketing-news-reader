@@ -51,11 +51,11 @@ const COMPANIES = [
     id: 'cathay',
     name: 'Cathay Pacific',
     domain: 'cathaypacific.com',
-    category: 'General',
+    category: 'Aviation',
     website: {
-      url: 'https://www.cathaypacific.com/cx/en/about-us/press-release.html',
+      url: 'https://news.cathaypacific.com/',
       selectors: {
-        container: '.press-item, article',
+        container: '.press-item, article, .news-card',
         title: 'h3, .title',
         description: 'p',
         link: 'a',
@@ -69,10 +69,10 @@ const COMPANIES = [
     domain: 'alibabagroup.com',
     category: 'Marketing',
     website: {
-      url: 'https://www.alibabagroup.com/en-US/about-alibaba-news',
+      url: 'https://www.alizila.com/',
       selectors: {
-        container: '.news-item, article',
-        title: 'h3, .title',
+        container: '.post, article',
+        title: 'h2, h3, .title',
         description: 'p',
         link: 'a',
         date: '.date'
@@ -85,7 +85,7 @@ const COMPANIES = [
     domain: 'sc.com',
     category: 'Finance',
     website: {
-      url: 'https://www.sc.com/en/news-and-media/',
+      url: 'https://www.sc.com/en/media/',
       selectors: {
         container: 'article, .news-item',
         title: 'h2, h3, .title',
@@ -144,22 +144,6 @@ const COMPANIES = [
     }
   },
   {
-    id: 'pdd',
-    name: 'PDD',
-    domain: 'pinduoduo-global.com',
-    category: 'Marketing',
-    website: {
-      url: 'https://investor.pddholdings.com/news-releases',
-      selectors: {
-        container: '.news-release, article',
-        title: 'h3, .title',
-        description: 'p',
-        link: 'a',
-        date: '.date'
-      }
-    }
-  },
-  {
     id: 'dbs',
     name: 'DBS',
     domain: 'dbs.com',
@@ -181,7 +165,7 @@ const COMPANIES = [
     domain: 'tencent.com',
     category: 'Technology',
     website: {
-      url: 'https://www.tencent.com/en-us/news.html',
+      url: 'https://www.tencent.com/en-us/media.html',
       selectors: {
         container: '.news-item, article',
         title: 'h3, .title',
@@ -256,22 +240,6 @@ const COMPANIES = [
     }
   },
   {
-    id: 'gov-singapore',
-    name: 'Government of Singapore',
-    domain: 'gov.sg',
-    category: 'General',
-    website: {
-      url: 'https://www.gov.sg/news',
-      selectors: {
-        container: 'article, .news-item',
-        title: 'h3, .title',
-        description: 'p',
-        link: 'a',
-        date: '.date'
-      }
-    }
-  },
-  {
     id: 'binance',
     name: 'Binance',
     domain: 'binance.com',
@@ -309,10 +277,42 @@ const COMPANIES = [
     domain: 'aeoncredit.com.my',
     category: 'Finance',
     website: {
-      url: 'https://www.aeoncredit.com.my/about-us/news-announcements',
+      url: 'https://www.aeoncredit.com.my/news-announcements',
       selectors: {
         container: '.news-item, article',
         title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
+  },
+  {
+    id: 'shopee',
+    name: 'Shopee',
+    domain: 'shopee.com',
+    category: 'Marketing',
+    website: {
+      url: 'https://careers.shopee.sg/blog/',
+      selectors: {
+        container: 'article, .post',
+        title: 'h2, h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
+  },
+  {
+    id: 'foodpanda',
+    name: 'Foodpanda',
+    domain: 'foodpanda.com',
+    category: 'Marketing',
+    website: {
+      url: 'https://www.foodpanda.com/newsroom/',
+      selectors: {
+        container: 'article, .news-item',
+        title: 'h2, h3, .title',
         description: 'p',
         link: 'a',
         date: '.date'

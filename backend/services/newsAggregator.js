@@ -66,11 +66,14 @@ async function fetchNewsForCompany(company) {
   // 2. Web search (DuckDuckGo & Bing)
   try {
     console.log(`Web searching (Bing/DDG) for ${company}...`);
-    const [ddgNews, bingNews] = await Promise.all([
-        searchDuckDuckGo(company, { limit: 10 }),
-        searchBingNews(company, { limit: 10 })
-    ]);
-    allNews = allNews.concat(ddgNews, bingNews);
+    const ddgNews = await searchDuckDuckGo(company, { limit: 15 });
+    allNews = allNews.concat(ddgNews);
+    
+    // Add small delay to avoid rate limiting
+    await sleep(1000);
+    
+    const bingNews = await searchBingNews(company, { limit: 15 });
+    allNews = allNews.concat(bingNews);
   } catch (error) {
     console.error(`Error web searching for ${company}:`, error.message);
   }
@@ -141,10 +144,19 @@ async function storeNews(articles, company) {
           ]
         );
       } else {
+        // Update category if we have a better one
         if (article.category && article.category !== 'General' && article.category !== 'news') {
           await db_helpers.run(
             'UPDATE news SET category = ? WHERE id = ? AND (category = "General" OR category = "news")',
             [article.category, existing.id]
+          );
+        }
+        // Update source if we found a more specific one (e.g., LinkedIn or Official Website over generic Web Search)
+        const premiumSources = ['LinkedIn', 'Official Website'];
+        if (premiumSources.includes(article.source)) {
+          await db_helpers.run(
+            'UPDATE news SET source = ? WHERE id = ? AND source NOT IN (?, ?)',
+            [article.source, existing.id, ...premiumSources]
           );
         }
       }
