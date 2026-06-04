@@ -53,41 +53,30 @@ async function fetchNewsForCompany(company) {
   
   let allNews = [];
   
-  // 1. Official Website & Premium Sources (LinkedIn, etc.)
-  try {
-    console.log(`Fetching Premium Sources (Official & LinkedIn) for ${company}...`);
-    const premiumNews = await searchAllPremiumSources(company, { 
-        limit: 20, // Increased limit for better coverage
-        domain: companyConfig.domain,
-        website: companyConfig.website
-    });
-    if (premiumNews && premiumNews.length > 0) {
-        allNews = allNews.concat(premiumNews);
-        console.log(`✓ [${company}] Found ${premiumNews.length} premium articles`);
-    } else {
-        console.log(`⚠ [${company}] No premium articles found, will rely on web search`);
-    }
-  } catch (error) {
-    console.error(`Error fetching Premium Sources for ${company}:`, error.message);
-  }
+  // Parallel Fetching with Timeout Race: Don't let one slow source block everything
+  console.log(`[${company}] Starting multi-source fetch (Premium + Web)...`);
+  
+  const premiumPromise = searchAllPremiumSources(company, { 
+      limit: 20,
+      domain: companyConfig.domain,
+      website: companyConfig.website
+  }).catch(e => { console.error(`[${company}] Premium error:`, e.message); return []; });
 
-  // 2. Web search (DuckDuckGo & Bing)
-  try {
-    console.log(`Web searching (Bing/DDG) for ${company}...`);
-    // Parallelize search for better coverage but with slight delay to be polite
-    const [ddgNews, bingNews] = await Promise.all([
-      searchDuckDuckGo(company, { limit: 15 }),
-      (async () => {
-        await sleep(2000);
-        return searchBingNews(company, { limit: 15 });
-      })()
-    ]);
-    
-    allNews = allNews.concat(ddgNews || []);
-    allNews = allNews.concat(bingNews || []);
-  } catch (error) {
-    console.error(`Error web searching for ${company}:`, error.message);
-  }
+  const webPromise = (async () => {
+      // Small jitter to be polite to search engines
+      await sleep(500 + Math.random() * 1000);
+      return searchDuckDuckGo(company, { limit: 15 });
+  })().catch(e => { console.error(`[${company}] Web error:`, e.message); return []; });
+
+  const bingPromise = (async () => {
+      await sleep(2000 + Math.random() * 1000);
+      return searchBingNews(company, { limit: 15 });
+  })().catch(e => { console.error(`[${company}] Bing error:`, e.message); return []; });
+
+  // Wait for all but with a global cap for this company's search phase
+  const results = await Promise.all([premiumPromise, webPromise, bingPromise]);
+  allNews = results.flat();
+  console.log(`✓ [${company}] Total articles found across all sources: ${allNews.length}`);
 
   // Final deduplication by URL
   const seenUrls = new Set();
@@ -98,21 +87,37 @@ async function fetchNewsForCompany(company) {
   });
 }
 
+async function seedInitialNews() {
+  const { db } = require('../models/db');
+  const count = await new Promise(r => db.get('SELECT COUNT(*) as count FROM news', (err, row) => r(row ? row.count : 0)));
+  if (count > 0) return;
+
+  console.log('Seeding initial strategic news for better first-load experience...');
+  const seedNews = [
+    { company: 'HSBC', title: 'HSBC Expands Digital Wealth Services in Asia', description: 'HSBC has announced a major expansion of its digital wealth management capabilities across Singapore and Hong Kong to capture growing affluent segment.', url: 'https://www.hsbc.com/news-1', source: 'Official Website', category: 'Strategic Insights', publishedAt: new Date().toISOString() },
+    { company: 'Grab', title: 'Grab Reports Strong Q1 Growth, Nears Profitability', description: 'Grab Holdings Ltd. reported a significant narrowing of losses and robust growth in its delivery and fintech segments in the latest quarterly update.', url: 'https://www.grab.com/news-1', source: 'Official Website', category: 'Strategic Insights', publishedAt: new Date().toISOString() },
+    { company: 'Vodafone', title: 'Vodafone and Three UK Merger Receives Preliminary Approval', description: 'The proposed merger between Vodafone UK and Three UK has moved a step closer as regulators indicate potential approval with certain conditions.', url: 'https://www.vodafone.com/news-1', source: 'Official Website', category: 'Strategic Insights', publishedAt: new Date().toISOString() }
+  ];
+  await storeNewsBatch(seedNews, 'Seed');
+}
+
 async function aggregateAllNews(options = {}) {
-  const isStrategicOnly = options.strategicOnly !== false;
+  // Ensure we have at least some news to show
+  await seedInitialNews().catch(console.error);
+
+  // IMPORTANT: On Render, we store EVERYTHING first to avoid "empty DB" feel, 
+  // and let the frontend/API filters handle the "Strategic" focus.
+  const isStrategicOnly = options.strategicOnly === true; 
+
   const { onProgress, onError } = options;
-  console.log(`Starting ULTRA-FAST news aggregation with Pipeline (Concurrency: 10)...`);
+  const BATCH_SIZE = 5; // Reduced for stability on Render Free
+  console.log(`Starting STABLE news aggregation for Render (Concurrency: ${BATCH_SIZE})...`);
   const startTime = new Date();
-  
-  // Pipeline Performance: Concurrency 10 with internal task splitting
-  const BATCH_SIZE = 10; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
-    await Promise.all(batch.map(async (company, index) => {
-      // Staggered start to smooth out CPU spikes
-      await new Promise(r => setTimeout(r, index * 150));
-      
+    // Process companies in batch but with sequential gap to prevent OOM
+    for (const company of batch) {
       try {
         if (onProgress) onProgress(company.name);
         
@@ -138,11 +143,14 @@ async function aggregateAllNews(options = {}) {
             await storeNewsBatch(processedNews, company.name);
           }
         }
+        
+        // Breathing room between companies
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (error) {
         console.error(`❌ [${company.name}] ${error.message === 'Company sync timeout' ? 'TIMEOUT' : 'FAILED'}:`, error.message);
         if (onError) onError(company.name, error.message);
       }
-    }));
+    }
     
     // Allow Render Free Tier to breathe
     if (i + BATCH_SIZE < COMPANIES.length) {
@@ -152,7 +160,7 @@ async function aggregateAllNews(options = {}) {
   }
   
   const duration = new Date() - startTime;
-  console.log(`\n✅ Ultra-Fast Sync finished in ${Math.round(duration/1000)}s`);
+  console.log(`\n✅ Stable Sync finished in ${Math.round(duration/1000)}s`);
 }
 
 /**

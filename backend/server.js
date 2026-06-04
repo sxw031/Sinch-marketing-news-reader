@@ -101,6 +101,40 @@ app.get('/api/news/aggregation-status', (req, res) => {
     });
 });
 
+// DEBUG INTERFACE: To see what's happening inside Render's black box
+app.get('/api/debug/stats', async (req, res) => {
+    try {
+        const db = require('./models/db');
+        const newsCount = await new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM news', [], (err, row) => {
+                if (err) reject(err);
+                else resolve(row ? row.count : 0);
+            });
+        });
+        
+        const memory = process.memoryUsage();
+        const aggregationStatus = getAggregationStatus();
+        
+        res.json({
+            success: true,
+            db: {
+                path: process.env.FORCE_DB_PATH || 'default',
+                newsCount: newsCount
+            },
+            system: {
+                uptime: process.uptime(),
+                memory: {
+                    rss: `${Math.round(memory.rss / 1024 / 1024)}MB`,
+                    heapUsed: `${Math.round(memory.heapUsed / 1024 / 1024)}MB`
+                }
+            },
+            aggregation: aggregationStatus
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Health check endpoint for Render
 app.get('/api/health', (req, res) => { 
   const status = getAggregationStatus();

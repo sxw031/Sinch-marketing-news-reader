@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setupEventListeners();
     
+    // Initial status check and start polling
+    startStatusPolling();
+
     // Theme initialization
     if (localStorage.getItem('theme') === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -620,6 +623,18 @@ function startStatusPolling(btn, originalText) {
         try {
             const response = await fetch(`${API_BASE}/aggregation-status`);
             const data = await response.json();
+
+            // Also check debug stats for deep diagnosis
+            const debugResponse = await fetch(`/api/debug/stats`);
+            const debugData = await debugResponse.json();
+            if (debugData.success) {
+                console.log('DEBUG STATS:', debugData);
+                // Auto-trigger if empty
+                if (debugData.db.newsCount === 0 && !data.status.inProgress) {
+                    console.warn('Database is empty. Re-triggering sync...');
+                    triggerAggregation(true);
+                }
+            }
             
             if (data.success && data.status.inProgress) {
                 const status = data.status;

@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /**
  * Enhanced Axios request with retries and jitter
  */
-async function fetchWithRetry(url, options = {}, retries = 2) {
+async function fetchWithRetry(url, options = {}, retries = 0) { // No retries for initial sync to avoid hanging
   for (let i = 0; i <= retries; i++) {
     try {
       const response = await axios.get(url, {
@@ -28,7 +28,7 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
           'Pragma': 'no-cache',
           ...options.headers
         },
-        timeout: 10000 // Tighter timeout for faster failover
+        timeout: 5000 // Fast fail for initial sync speed
       });
       return response;
     } catch (error) {
@@ -79,8 +79,8 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
       const baseDelay = site === 'linkedin.com' ? 2500 : 800;
       await sleep(baseDelay + Math.random() * 1500);
       
-      // Use DuckDuckGo time filter: 'd' for past day to ensure recency
-      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&df=d`;
+      // Use DuckDuckGo time filter: 'w' for past week to ensure we get results even if slow day
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&df=w`;
       try {
         const response = await fetchWithRetry(url);
         const $ = cheerio.load(response.data);
