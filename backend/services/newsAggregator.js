@@ -116,8 +116,15 @@ async function aggregateAllNews(options = {}) {
       try {
         if (onProgress) onProgress(company.name);
         
-        const news = await fetchNewsForCompany(company.name);
-        if (news.length > 0) {
+        // TIMEOUT GUARD: Force timeout after 45 seconds per company
+        const fetchPromise = fetchNewsForCompany(company.name);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Company sync timeout')), 45000)
+        );
+
+        const news = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (news && news.length > 0) {
           let processedNews = news.map(article => ({
             ...article,
             category: classifyArticle(article.title, article.description)
@@ -128,12 +135,11 @@ async function aggregateAllNews(options = {}) {
           }
 
           if (processedNews.length > 0) {
-            // ULTRA-FAST: Use batch transaction for each company's results
             await storeNewsBatch(processedNews, company.name);
           }
         }
       } catch (error) {
-        console.error(`❌ [${company.name}] Aggregation failed:`, error.message);
+        console.error(`❌ [${company.name}] ${error.message === 'Company sync timeout' ? 'TIMEOUT' : 'FAILED'}:`, error.message);
         if (onError) onError(company.name, error.message);
       }
     }));

@@ -28,7 +28,7 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
           'Pragma': 'no-cache',
           ...options.headers
         },
-        timeout: 15000
+        timeout: 10000 // Tighter timeout for faster failover
       });
       return response;
     } catch (error) {
@@ -37,8 +37,8 @@ async function fetchWithRetry(url, options = {}, retries = 2) {
       
       if (isLastRetry) throw error;
       
-      const isNetworkError = error.code === 'ECONNRESET' || error.message.includes('socket hang up');
-      const delay = (is403 || isNetworkError) ? 5000 * (i + 1) : 1000 * (i + 1);
+      const isNetworkError = error.code === 'ECONNRESET' || error.message.includes('socket hang up') || error.code === 'ETIMEDOUT';
+      const delay = (is403 || isNetworkError) ? 3000 * (i + 1) : 800 * (i + 1);
       console.log(`Request failed (${error.message}). Retrying in ${delay}ms...`);
       await sleep(delay + Math.random() * 2000);
     }
