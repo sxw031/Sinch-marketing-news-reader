@@ -167,18 +167,16 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   // Perform initial news aggregation in a non-blocking way
   setImmediate(async () => {
     try {
+        const { aggregateAllNews } = require('./services/newsAggregator');
         const status = getAggregationStatus();
         if (status.inProgress) return;
         
         console.log('Starting initial strategic news aggregation in background...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Use a mock req/res for the controller function or call aggregator directly
-        // For simplicity, we just log and wait for the first manual or interval trigger
-        // or we can implement a internal trigger.
-        console.log('Server ready for aggregation.');
+        // This will now trigger seedInitialNews() internally as well
+        await aggregateAllNews({ strategicOnly: false });
+        console.log('Initial aggregation completed.');
     } catch (err) {
-        console.error('Failed to check initial aggregation status:', err);
+        console.error('Failed to run initial aggregation:', err);
     }
   });
 
