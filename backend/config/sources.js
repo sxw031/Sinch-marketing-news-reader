@@ -286,38 +286,6 @@ const COMPANIES = [
         date: '.date'
       }
     }
-  },
-  {
-    id: 'shopee',
-    name: 'Shopee',
-    domain: 'shopee.com',
-    category: 'Marketing',
-    website: {
-      url: 'https://careers.shopee.sg/blog/',
-      selectors: {
-        container: 'article, .post',
-        title: 'h2, h3, .title',
-        description: 'p',
-        link: 'a',
-        date: '.date'
-      }
-    }
-  },
-  {
-    id: 'foodpanda',
-    name: 'Foodpanda',
-    domain: 'foodpanda.com',
-    category: 'Marketing',
-    website: {
-      url: 'https://www.foodpanda.com/newsroom/',
-      selectors: {
-        container: 'article, .news-item',
-        title: 'h2, h3, .title',
-        description: 'p',
-        link: 'a',
-        date: '.date'
-      }
-    }
   }
 ];
 

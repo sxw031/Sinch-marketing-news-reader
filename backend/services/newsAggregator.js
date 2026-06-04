@@ -44,6 +44,8 @@ function classifyArticle(title, description) {
 /**
  * Fetch news for a specific company including premium sources
  */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function fetchNewsForCompany(company) {
   const companyConfig = COMPANIES.find(c => c.name.toLowerCase() === company.toLowerCase());
   if (!companyConfig) return [];
@@ -85,29 +87,27 @@ async function aggregateAllNews() {
   console.log('Starting comprehensive news aggregation...');
   const startTime = new Date();
   
-  // Use a smaller batch size to avoid overwhelming the network but still process faster than serial
-  const BATCH_SIZE = 2; 
-  for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
-    const batch = COMPANIES.slice(i, i + BATCH_SIZE);
-    console.log(`\n--- Processing Batch ${Math.floor(i/BATCH_SIZE) + 1} (${batch.map(c => c.name).join(', ')}) ---`);
+  // Use serial processing for maximum reliability in constrained environments
+  const BATCH_SIZE = 1; 
+  for (let i = 0; i < COMPANIES.length; i++) {
+    const company = COMPANIES[i];
+    console.log(`\n--- Processing [${i+1}/${COMPANIES.length}] ${company.name} ---`);
     
-    await Promise.all(batch.map(async (company) => {
-      try {
-        const news = await fetchNewsForCompany(company.name);
-        if (news.length > 0) {
-          const classifiedNews = news.map(article => ({
-            ...article,
-            category: classifyArticle(article.title, article.description)
-          }));
-          await storeNews(classifiedNews, company.name);
-          console.log(`✓ [${company.name}] Stored ${news.length} articles`);
-        } else {
-          console.log(`⚠ [${company.name}] No articles found`);
-        }
-      } catch (error) {
-        console.error(`❌ [${company.name}] Aggregation failed:`, error.message);
+    try {
+      const news = await fetchNewsForCompany(company.name);
+      if (news.length > 0) {
+        const classifiedNews = news.map(article => ({
+          ...article,
+          category: classifyArticle(article.title, article.description)
+        }));
+        await storeNews(classifiedNews, company.name);
+        console.log(`✓ [${company.name}] Stored ${news.length} articles`);
+      } else {
+        console.log(`⚠ [${company.name}] No articles found`);
       }
-    }));
+    } catch (error) {
+      console.error(`❌ [${company.name}] Aggregation failed:`, error.message);
+    }
     
     // Polite delay between batches
     if (i + BATCH_SIZE < COMPANIES.length) {

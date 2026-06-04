@@ -37,8 +37,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedCompanies = JSON.parse(saved);
     }
 
+    // Set default time range to 24h on initial load
+    const now = new Date();
+    const start = new Date();
+    start.setHours(now.getHours() - 24);
+    activeTimeRange = start.toISOString();
+
     await loadCompanies();
     await loadNews();
+    
+    // Highlight the 24h button by default
+    const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="24h"]');
+    if (defaultTimeBtn) defaultTimeBtn.classList.add('active');
     
     setupEventListeners();
     
@@ -256,15 +266,25 @@ function setupEventListeners() {
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
     document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(); });
 
-    // Logo click to reset everything and show all
+    // Logo click to reset everything and show all with default 24h filter
     document.querySelector('.logo').addEventListener('click', (e) => {
         e.preventDefault();
         selectedCompanies = [];
-        activeTimeRange = null;
+        
+        // Reset to default 24h range
+        const now = new Date();
+        const start = new Date();
+        start.setHours(now.getHours() - 24);
+        activeTimeRange = start.toISOString();
+        
         document.getElementById('categoryFilter').value = '';
         document.getElementById('sourceFilter').value = '';
         document.getElementById('searchInput').value = '';
+        
         document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
+        const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="24h"]');
+        if (defaultTimeBtn) defaultTimeBtn.classList.add('active');
+        
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
         renderCompanyGrid();
         loadNews();
