@@ -298,8 +298,10 @@ async function searchBingNews(company, options = {}) {
       let description = descEl.text().trim();
       let rawSource = sourceEl.text().trim() || 'Bing News';
 
-      let source = rawSource;
-      if (source.length <= 3 || /^\d+[DWMY]/.test(source)) {
+      // Clean up Bing source names (e.g., "Wall Street Journal11mon" -> "Wall Street Journal")
+      let source = rawSource.replace(/\d+(h|d|w|m|y|mon|yr|ago).*$/i, '').trim();
+      
+      if (source.length <= 3 || /^\d+[DWMY]/.test(source) || !source) {
           source = 'Bing News';
       }
       if (source.toUpperCase() === 'MSN') source = 'MSN News';
