@@ -7,15 +7,26 @@ let selectedCompanies = JSON.parse(localStorage.getItem(SELECTED_COMPANIES_KEY) 
 let activeTimeRange = null;
 let pollingTimer = null;
 
-// Company domains for logo fallback
-const DOMAINS = {
-  'HSBC': 'hsbc.com', 'Grab': 'grab.com', 'Vodafone': 'vodafone.com',
-  'Cathay Pacific': 'cathaypacific.com', 'Alibaba': 'alibaba.com',
-  'Standard Chartered': 'sc.com', 'Temu': 'temu.com', 'Ctrip': 'trip.com',
-  'Didi': 'didiglobal.com', 'DBS': 'dbs.com', 'Tencent': 'tencent.com',
-  'Bank of China': 'boc.cn', 'ByteDance': 'bytedance.com', 'Gojek': 'gojek.com',
-  'Citigroup': 'citigroup.com', 'Binance': 'binance.com',
-  'ShopBack': 'shopback.com', 'Aeon Credit': 'aeoncredit.com.my'
+// Logo URLs - use Wikipedia for problematic domains, Clearbit for others
+const LOGO_MAP = {
+  'HSBC': 'https://logo.clearbit.com/hsbc.com',
+  'Grab': 'https://logo.clearbit.com/grab.com',
+  'Vodafone': 'https://logo.clearbit.com/vodafone.com',
+  'Cathay Pacific': 'https://logo.clearbit.com/cathaypacific.com',
+  'Alibaba': 'https://logo.clearbit.com/alibaba.com',
+  'Standard Chartered': 'https://logo.clearbit.com/sc.com',
+  'Temu': 'https://logo.clearbit.com/temu.com',
+  'Ctrip': 'https://logo.clearbit.com/trip.com',
+  'Didi': 'https://logo.clearbit.com/didiglobal.com',
+  'DBS': 'https://logo.clearbit.com/dbs.com',
+  'Tencent': 'https://logo.clearbit.com/tencent.com',
+  'Bank of China': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Bank_of_China_logo.svg/200px-Bank_of_China_logo.svg.png',
+  'ByteDance': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/ByteDance_logo.svg/200px-ByteDance_logo.svg.png',
+  'Gojek': 'https://logo.clearbit.com/gojek.com',
+  'Citigroup': 'https://logo.clearbit.com/citigroup.com',
+  'Binance': 'https://logo.clearbit.com/binance.com',
+  'ShopBack': 'https://logo.clearbit.com/shopback.com',
+  'Aeon Credit': 'https://logo.clearbit.com/aeoncredit.com.my'
 };
 
 // ==================== INIT ====================
@@ -104,9 +115,7 @@ async function loadNews(silent = false) {
 
 // ==================== AGGREGATION & PROGRESS ====================
 async function triggerAggregation() {
-  // Show progress bar immediately
   showSyncBar(true, 'Starting sync...', 0);
-
   try {
     await fetch(`${API_BASE}/aggregate`, { method: 'POST' });
     startPolling();
@@ -118,31 +127,26 @@ async function triggerAggregation() {
 
 function startPolling() {
   if (pollingTimer) clearInterval(pollingTimer);
-
   pollingTimer = setInterval(async () => {
     try {
       const res = await fetch(`${API_BASE}/aggregation-status`);
       const data = await res.json();
-
       if (data.success && data.status.inProgress) {
         const s = data.status;
         const done = s.completedCompanies.length;
         const total = s.totalCompanies || 18;
         const pct = Math.round((done / total) * 100);
         showSyncBar(true, `Syncing: ${done}/${total} [${s.currentCompany || '...'}]`, pct);
-        // Refresh news list silently
         await loadNews(true);
       } else {
-        // Done
         showSyncBar(true, 'Sync complete!', 100);
-        setTimeout(() => showSyncBar(false), 1500);
+        setTimeout(() => showSyncBar(false), 2000);
         clearInterval(pollingTimer);
         pollingTimer = null;
         await loadNews(false);
+        await loadSources();
       }
-    } catch (e) {
-      console.error('polling:', e);
-    }
+    } catch (e) { console.error('polling:', e); }
   }, 2500);
 }
 
@@ -150,19 +154,15 @@ function showSyncBar(show, text, pct) {
   const bar = document.getElementById('syncStatusBar');
   const textEl = document.getElementById('syncStatusText');
   const progressEl = document.getElementById('syncProgressBar');
-
   if (bar) bar.style.display = show ? 'block' : 'none';
-  if (textEl && text) textEl.textContent = `${text} ${pct !== undefined ? pct + '%' : ''}`;
+  if (textEl && text) textEl.textContent = `${text} ${pct !== undefined ? '(' + pct + '%)' : ''}`;
   if (progressEl && pct !== undefined) progressEl.style.width = `${pct}%`;
 }
 
 // ==================== RENDERING ====================
 function renderNews() {
   const list = document.getElementById('newsList');
-  if (allNews.length === 0) {
-    showEmptyState(true);
-    return;
-  }
+  if (allNews.length === 0) { showEmptyState(true); return; }
   showEmptyState(false);
   list.innerHTML = allNews.map(a => createCard(a)).join('');
   list.querySelectorAll('.news-card').forEach(card => {
@@ -172,7 +172,7 @@ function renderNews() {
 
 function createCard(article) {
   const logo = getLogoUrl(article.company);
-  const date = formatDate(article.publishedAt);
+  const date = formatRelativeTime(article.publishedAt);
   const isStrategic = article.category === 'Strategic Insights';
   return `
     <div class="news-card ${isStrategic ? 'strategic' : ''}" data-article='${JSON.stringify(article).replace(/'/g, "&#39;")}'>
@@ -197,7 +197,7 @@ function showArticleModal(article) {
   const body = document.getElementById('modalBody');
   const logo = getLogoUrl(article.company);
   body.innerHTML = `
-    <div style="text-align:center;margin-bottom:2rem;background:#f8fafc;padding:2rem;border-radius:16px;">
+    <div style="text-align:center;margin-bottom:2rem;background:var(--bg-secondary);padding:2rem;border-radius:16px;">
       <img src="${logo}" alt="${article.company}" style="max-width:160px;height:80px;object-fit:contain;" onerror="handleLogoError(this,'${article.company}')">
     </div>
     <h2 style="font-size:1.5rem;margin-bottom:1rem;font-weight:800;line-height:1.3;">${esc(article.title)}</h2>
@@ -205,7 +205,7 @@ function showArticleModal(article) {
       <span class="badge badge-company">${article.company}</span>
       <span class="badge badge-source">${article.source}</span>
       <span class="badge badge-category">${article.category}</span>
-      <span class="news-card-date">${formatDate(article.publishedAt)}</span>
+      <span class="news-card-date">${formatRelativeTime(article.publishedAt)}</span>
     </div>
     <p style="font-size:1.05rem;line-height:1.7;color:var(--text-main);margin-bottom:2rem;">${esc(article.description || 'No description available')}</p>
     <div style="display:flex;justify-content:center;">
@@ -215,6 +215,57 @@ function showArticleModal(article) {
     </div>`;
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
+}
+
+// ==================== YEARLY SUMMARY ====================
+async function showYearlySummary(year) {
+  const modal = document.getElementById('yearlySummaryModal');
+  const title = document.getElementById('yearlySummaryTitle');
+  const content = document.getElementById('yearlySummaryContent');
+
+  title.textContent = `${year} Major Events Summary`;
+  content.innerHTML = '<div style="text-align:center;padding:3rem;"><div class="spinner"></div><p>Loading summary...</p></div>';
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const res = await fetch(`${API_BASE}/yearly-summary/${year}`);
+    const data = await res.json();
+    if (data.success) {
+      content.innerHTML = renderYearlySummary(data.data, year);
+    } else {
+      content.innerHTML = '<p>Failed to load summary.</p>';
+    }
+  } catch (e) {
+    content.innerHTML = '<p>Error loading summary.</p>';
+  }
+}
+
+function renderYearlySummary(companies, year) {
+  let html = `<div class="yearly-summary">`;
+  html += `<div class="yearly-header"><h2>${year} Strategic Events Overview</h2>
+    <p>Key developments across ${companies.length} tracked accounts for Sinch CSM intelligence</p></div>`;
+
+  companies.forEach(c => {
+    const relevanceClass = c.sinchRelevance === 'High' ? 'relevance-high' : c.sinchRelevance === 'Medium' ? 'relevance-medium' : 'relevance-low';
+    const logo = getLogoUrl(c.company);
+    html += `
+      <div class="yearly-company-card">
+        <div class="yearly-company-header">
+          <img src="${logo}" alt="${c.company}" class="yearly-logo" onerror="handleLogoError(this,'${c.company}')">
+          <div>
+            <h3>${c.company}</h3>
+            <span class="badge ${relevanceClass}">Sinch Relevance: ${c.sinchRelevance}</span>
+          </div>
+        </div>
+        <ul class="yearly-highlights">
+          ${c.highlights.map(h => `<li>${h}</li>`).join('')}
+        </ul>
+      </div>`;
+  });
+
+  html += `</div>`;
+  return html;
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -230,9 +281,17 @@ function setupEventListeners() {
   // Time range buttons
   document.querySelectorAll('.btn-quick-time').forEach(btn => {
     btn.addEventListener('click', () => {
+      const range = btn.dataset.range;
+
+      // If it's a year button (2023, 2024, 2025), show yearly summary modal
+      if (['2023', '2024', '2025'].includes(range)) {
+        showYearlySummary(parseInt(range));
+        return;
+      }
+
+      // Regular time filter
       document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const range = btn.dataset.range;
       const now = new Date();
       switch (range) {
         case '6h': now.setHours(now.getHours() - 6); break;
@@ -241,7 +300,6 @@ function setupEventListeners() {
         case '48h': now.setHours(now.getHours() - 48); break;
         case '1w': now.setDate(now.getDate() - 7); break;
         case '1m': now.setMonth(now.getMonth() - 1); break;
-        case '2020': now.setFullYear(2020, 0, 1); break;
       }
       activeTimeRange = now.toISOString();
       loadNews();
@@ -319,9 +377,8 @@ function setupEventListeners() {
       podcastBtn.querySelector('span').textContent = 'Generating...';
       const res = await fetch(`${API_BASE}/podcast`);
       const contentType = res.headers.get('content-type') || '';
-      
+
       if (contentType.includes('audio')) {
-        // Got audio back - play it
         const blob = await res.blob();
         podcastPlayer.src = URL.createObjectURL(blob);
         podcastPlayer.play();
@@ -333,20 +390,14 @@ function setupEventListeners() {
           podcastBtn.querySelector('span').textContent = 'Daily Podcast';
         };
       } else {
-        // Got JSON back - either error or fallback script
         const data = await res.json();
-        if (data.fallback && data.script) {
-          // Show script in a modal since TTS is unavailable
-          alert('Audio synthesis is temporarily unavailable. Here is the podcast script:\n\n' + data.script.substring(0, 500) + '...');
-        } else if (!data.success) {
-          throw new Error(data.error || 'Podcast generation failed');
-        }
+        if (!data.success) throw new Error(data.error || 'Podcast generation failed');
         podcastBtn.classList.remove('loading');
         podcastBtn.querySelector('span').textContent = 'Daily Podcast';
       }
     } catch (e) {
       console.error('Podcast:', e);
-      alert(`Podcast error: ${e.message}`);
+      alert(`Podcast: ${e.message}`);
       podcastBtn.classList.remove('loading');
       podcastBtn.querySelector('span').textContent = 'Daily Podcast';
     }
@@ -356,6 +407,7 @@ function setupEventListeners() {
   const reportModal = document.getElementById('reportModal');
   document.getElementById('generateReportBtn').addEventListener('click', async () => {
     reportModal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
     const content = document.getElementById('reportContent');
     content.innerHTML = '<div class="report-loading"><div class="spinner"></div><p>Generating strategic analysis...</p></div>';
     try {
@@ -368,7 +420,7 @@ function setupEventListeners() {
       });
       const data = await res.json();
       if (data.success) {
-        const listenBtn = `<div style="margin-bottom:1.5rem;text-align:right;">
+        const listenBtn = `<div style="margin-bottom:1.5rem;display:flex;justify-content:flex-end;">
           <button id="listenReportBtn" class="btn-icon-text btn-podcast" style="padding:8px 16px;border-radius:20px;border:none;cursor:pointer;">
             <i class="fas fa-play"></i> <span>Listen to Report</span>
           </button>
@@ -385,12 +437,17 @@ function setupEventListeners() {
           try {
             const audioRes = await fetch('/api/news/report-speech', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: data.report }) });
             if (!audioRes.ok) throw new Error('Audio generation failed');
-            audio.src = URL.createObjectURL(await audioRes.blob());
-            audio.play();
-            btn.classList.add('playing');
-            btn.querySelector('span').textContent = 'Playing...';
-            audio.onended = () => { btn.classList.remove('playing'); btn.querySelector('span').textContent = 'Listen to Report'; };
-          } catch (e) { alert('Audio failed: ' + e.message); btn.querySelector('span').textContent = 'Listen to Report'; }
+            const ct = audioRes.headers.get('content-type') || '';
+            if (ct.includes('audio')) {
+              audio.src = URL.createObjectURL(await audioRes.blob());
+              audio.play();
+              btn.classList.add('playing');
+              btn.querySelector('span').textContent = 'Playing...';
+              audio.onended = () => { btn.classList.remove('playing'); btn.querySelector('span').textContent = 'Listen to Report'; };
+            } else {
+              throw new Error('TTS unavailable');
+            }
+          } catch (e) { alert('Audio: ' + e.message); btn.querySelector('span').textContent = 'Listen to Report'; }
         });
       } else {
         content.innerHTML = '<p>Failed to generate report.</p>';
@@ -399,12 +456,18 @@ function setupEventListeners() {
       content.innerHTML = '<p>Error generating report. Please try again.</p>';
     }
   });
-  document.getElementById('closeReportModal').addEventListener('click', () => { reportModal.style.display = 'none'; });
+  document.getElementById('closeReportModal').addEventListener('click', () => { reportModal.style.display = 'none'; document.body.style.overflow = ''; });
   document.getElementById('downloadReportBtn').addEventListener('click', () => {
     const text = document.getElementById('reportContent').innerText;
     const blob = new Blob([text], { type: 'text/plain' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `MarketFeed_Report_${new Date().toISOString().split('T')[0]}.txt`; a.click();
+  });
+
+  // Yearly Summary Modal close
+  document.getElementById('closeYearlyModal').addEventListener('click', () => {
+    document.getElementById('yearlySummaryModal').style.display = 'none';
+    document.body.style.overflow = '';
   });
 
   // AI Chat
@@ -424,7 +487,7 @@ function setupEventListeners() {
     try {
       const res = await fetch('/api/news/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, context: allNews.slice(0, 15) }) });
       const data = await res.json();
-      botMsg.textContent = data.answer || 'No answer available.';
+      botMsg.innerHTML = renderMarkdown(data.answer || 'No answer available.');
     } catch (e) { botMsg.textContent = 'Connection error.'; }
   }
   document.getElementById('sendAiMessage').addEventListener('click', handleChat);
@@ -442,22 +505,27 @@ function setupEventListeners() {
   const articleModal = document.getElementById('articleModal');
   document.getElementById('closeModal').addEventListener('click', () => { articleModal.style.display = 'none'; document.body.style.overflow = ''; });
   window.addEventListener('click', (e) => {
-    [selectorModal, articleModal, reportModal].forEach(m => { if (e.target === m) { m.style.display = 'none'; document.body.style.overflow = ''; } });
+    [selectorModal, articleModal, reportModal, document.getElementById('yearlySummaryModal')].forEach(m => {
+      if (e.target === m) { m.style.display = 'none'; document.body.style.overflow = ''; }
+    });
   });
 }
 
 // ==================== HELPERS ====================
 function getLogoUrl(name) {
-  const domain = DOMAINS[name];
-  if (!domain) return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
-  return `https://logo.clearbit.com/${domain}?size=128`;
+  return LOGO_MAP[name] || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
 }
 
 window.handleLogoError = function(img, name) {
-  const domain = DOMAINS[name];
-  if (!domain) return;
-  if (img.src.includes('clearbit')) img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-  else if (!img.src.includes('ui-avatars')) img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
+  // Fallback chain: Clearbit -> Google Favicon -> UI Avatars
+  if (img.src.includes('clearbit') || img.src.includes('wikipedia')) {
+    const domains = { 'HSBC': 'hsbc.com', 'Grab': 'grab.com', 'Vodafone': 'vodafone.com', 'Cathay Pacific': 'cathaypacific.com', 'Alibaba': 'alibaba.com', 'Standard Chartered': 'sc.com', 'Temu': 'temu.com', 'Ctrip': 'trip.com', 'Didi': 'didiglobal.com', 'DBS': 'dbs.com', 'Tencent': 'tencent.com', 'Bank of China': 'boc.cn', 'ByteDance': 'bytedance.com', 'Gojek': 'gojek.com', 'Citigroup': 'citigroup.com', 'Binance': 'binance.com', 'ShopBack': 'shopback.com', 'Aeon Credit': 'aeoncredit.com.my' };
+    const domain = domains[name];
+    if (domain) { img.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`; return; }
+  }
+  if (!img.src.includes('ui-avatars')) {
+    img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
+  }
 };
 
 function renderCompanyGrid() {
@@ -492,6 +560,7 @@ function appendChat(role, text) {
 }
 
 function renderMarkdown(md) {
+  if (!md) return '';
   return md
     .replace(/^### (.*$)/gim, '<h3 class="report-h3">$1</h3>')
     .replace(/^## (.*$)/gim, '<h2 class="report-h2">$1</h2>')
@@ -519,15 +588,31 @@ function showEmptyState(show) {
   if (show) document.getElementById('newsList').innerHTML = '';
 }
 
-function formatDate(str) {
+/**
+ * Format publishedAt to relative time (e.g., "3h ago", "2d ago")
+ * The DB stores ISO 8601 format: "2026-06-04T13:11:46Z"
+ * This ensures consistent behavior across all timezones
+ */
+function formatRelativeTime(str) {
   if (!str) return '';
-  const d = new Date(str);
+  // Ensure the string is treated as UTC
+  let dateStr = str;
+  if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+    // If it's "YYYY-MM-DD HH:MM:SS" format (legacy), treat as UTC
+    dateStr = dateStr.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  const diff = Date.now() - d.getTime();
+
+  const now = Date.now();
+  const diff = now - d.getTime();
+
   if (diff < 0) return 'Just now';
+  if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
   if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+  if (diff < 2592000000) return `${Math.floor(diff / 604800000)}w ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 

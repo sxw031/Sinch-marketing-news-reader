@@ -75,7 +75,10 @@
                     <button class="btn-quick-time" data-range="48h">48h</button>
                     <button class="btn-quick-time" data-range="1w">1w</button>
                     <button class="btn-quick-time" data-range="1m">1m</button>
-                    <button class="btn-quick-time" data-range="2020">Since 2020</button>
+                    <span class="time-divider">|</span>
+                    <button class="btn-quick-time btn-yearly" data-range="2023">2023</button>
+                    <button class="btn-quick-time btn-yearly" data-range="2024">2024</button>
+                    <button class="btn-quick-time btn-yearly" data-range="2025">2025</button>
                 </div>
                 
                 <div class="filter-row">
@@ -201,6 +204,17 @@
                     <i class="fas fa-download"></i> Download Report
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Yearly Summary Modal -->
+    <div id="yearlySummaryModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-calendar-alt"></i> <span id="yearlySummaryTitle">Year Summary</span></h2>
+                <span class="close" id="closeYearlyModal">&times;</span>
+            </div>
+            <div id="yearlySummaryContent" class="report-content" style="padding: 1.5rem 0;"></div>
         </div>
     </div>
 

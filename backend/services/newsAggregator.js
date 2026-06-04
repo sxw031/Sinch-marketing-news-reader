@@ -4,10 +4,10 @@ const { COMPANIES } = require('../config/sources');
 
 // --- Category Classification ---
 const CATEGORY_RULES = [
-  { category: 'Strategic Insights', keywords: ['partnership', 'collaboration', 'expand', 'growth', 'acquisition', 'merger', 'ceo', 'executive', 'revenue', 'profit', 'earnings', 'strategy', 'invest', 'funding', 'launch', 'hiring', 'layoff', 'rebrand', 'contract', 'deal', 'agreement'] },
-  { category: 'Finance', keywords: ['stock', 'ipo', 'bank', 'fintech', 'payment', 'loan', 'credit', 'interest rate', 'equity', 'dividend'] },
-  { category: 'Marketing', keywords: ['campaign', 'brand', 'marketing', 'social media', 'engagement', 'promotion', 'advertising'] },
-  { category: 'Technology', keywords: ['ai', 'artificial intelligence', 'cloud', 'software', 'app', 'cybersecurity', 'data', 'platform', 'machine learning'] }
+  { category: 'Strategic Insights', keywords: ['partnership', 'collaboration', 'expand', 'growth', 'acquisition', 'merger', 'ceo', 'executive', 'revenue', 'profit', 'earnings', 'strategy', 'invest', 'funding', 'launch', 'hiring', 'layoff', 'rebrand', 'contract', 'deal', 'agreement', 'announce', 'milestone', 'record'] },
+  { category: 'Finance', keywords: ['stock', 'ipo', 'bank', 'fintech', 'payment', 'loan', 'credit', 'interest rate', 'equity', 'dividend', 'shares', 'market cap'] },
+  { category: 'Marketing', keywords: ['campaign', 'brand', 'marketing', 'social media', 'engagement', 'promotion', 'advertising', 'customer'] },
+  { category: 'Technology', keywords: ['ai', 'artificial intelligence', 'cloud', 'software', 'app', 'cybersecurity', 'data', 'platform', 'machine learning', 'api', 'messaging', 'sms', 'rcs'] }
 ];
 
 function classifyArticle(title, description) {
@@ -32,8 +32,8 @@ async function storeArticles(articles) {
       `);
 
       for (const a of articles) {
-        // Always store as "YYYY-MM-DD HH:MM:SS" format (no T, no Z)
-        const publishedAt = normalizeDate(a.publishedAt);
+        // Store as ISO 8601 with T and Z for consistent cross-platform parsing
+        const publishedAt = normalizeToISO(a.publishedAt);
 
         stmt.run([
           a.company,
@@ -58,13 +58,14 @@ async function storeArticles(articles) {
 }
 
 /**
- * Normalize any date input to "YYYY-MM-DD HH:MM:SS" format for consistent DB storage and querying
+ * Normalize any date input to ISO 8601 format "YYYY-MM-DDTHH:MM:SSZ"
+ * This ensures consistent parsing in both Node.js and browsers across all timezones
  */
-function normalizeDate(input) {
-  if (!input) return new Date().toISOString().replace('T', ' ').split('.')[0];
+function normalizeToISO(input) {
+  if (!input) return new Date().toISOString().split('.')[0] + 'Z';
   const d = new Date(input);
-  if (isNaN(d.getTime())) return new Date().toISOString().replace('T', ' ').split('.')[0];
-  return d.toISOString().replace('T', ' ').split('.')[0];
+  if (isNaN(d.getTime())) return new Date().toISOString().split('.')[0] + 'Z';
+  return d.toISOString().split('.')[0] + 'Z';
 }
 
 // --- Aggregation Engine ---
@@ -129,15 +130,17 @@ async function getNews(filters = {}) {
     params.push(filters.company);
   }
 
-  // CRITICAL FIX: Normalize incoming ISO dates to match DB format "YYYY-MM-DD HH:MM:SS"
+  // Time filter: compare ISO strings directly (both stored and input are ISO 8601)
   if (filters.startDate) {
+    const startISO = normalizeToISO(filters.startDate);
     sql += ' AND publishedAt >= ?';
-    params.push(normalizeDate(filters.startDate));
+    params.push(startISO);
   }
 
   if (filters.endDate) {
+    const endISO = normalizeToISO(filters.endDate);
     sql += ' AND publishedAt <= ?';
-    params.push(normalizeDate(filters.endDate));
+    params.push(endISO);
   }
 
   if (filters.category) {
@@ -171,7 +174,7 @@ async function getNewsCount() {
 }
 
 function getAvailableCompanies() {
-  return COMPANIES.map(c => ({ id: c.id, name: c.name, category: c.category, logoUrl: c.logoUrl }));
+  return COMPANIES.map(c => ({ id: c.id, name: c.name, category: c.category }));
 }
 
 async function getSources() {
@@ -187,5 +190,5 @@ module.exports = {
   getSources,
   storeArticles,
   classifyArticle,
-  normalizeDate
+  normalizeToISO
 };
