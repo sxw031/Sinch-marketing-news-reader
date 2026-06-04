@@ -280,8 +280,8 @@ function setupEventListeners() {
         document.querySelectorAll('.company-item').forEach(item => item.classList.remove('selected'));
     });
 
-    document.getElementById('refreshBtn').addEventListener('click', () => triggerAggregation(false));
-    document.getElementById('fetchAllBtn').addEventListener('click', () => triggerAggregation(true));
+    document.getElementById('refreshBtn').addEventListener('click', async () => await triggerAggregation(false));
+    document.getElementById('fetchAllBtn').addEventListener('click', async () => await triggerAggregation(true));
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews(false, false));
     
     // Podcast Logic
@@ -320,7 +320,7 @@ function setupEventListeners() {
             };
         } catch (error) {
             console.error('Podcast error:', error);
-            alert('Could not generate podcast. Make sure there is news from the last 24h.');
+            alert('Could not generate podcast. Please ensure news is loaded.');
             podcastBtn.classList.remove('loading');
             podcastBtn.querySelector('span').textContent = 'Daily Podcast';
         }
@@ -445,22 +445,66 @@ function setupEventListeners() {
             });
             const data = await response.json();
             if (data.success) {
+                // Add Listen Button at top
+                const listenBtnHtml = `
+                    <div style="margin-bottom: 20px; text-align: right;">
+                        <button id="listenToReportBtn" class="btn-icon-text btn-refresh" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer;">
+                            <i class="fas fa-play"></i> <span>Listen to Report</span>
+                        </button>
+                        <audio id="reportAudio" style="display:none"></audio>
+                    </div>
+                `;
+
                 // Professional Markdown-to-HTML rendering
                 let html = data.report
-                    .replace(/^# (.*$)/gim, '<h1 style="font-size: 1.8rem; margin: 2rem 0 1rem; color: var(--primary);">$1</h1>')
-                    .replace(/^## (.*$)/gim, '<h2 style="font-size: 1.4rem; margin: 1.5rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">$1</h2>')
-                    .replace(/^### (.*$)/gim, '<h3 style="font-size: 1.2rem; margin: 1.2rem 0 0.8rem; color: var(--text-main);">$1</h3>')
-                    .replace(/^#### (.*$)/gim, '<h4 style="font-size: 1.1rem; margin: 1rem 0 0.5rem; font-weight: bold;">$1</h4>')
-                    .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 4px solid var(--primary); background: var(--bg-secondary); padding: 1rem; margin: 1rem 0; font-style: italic; border-radius: 0 8px 8px 0;">$1</blockquote>')
-                    .replace(/\*\*\*/g, '<hr style="border: none; border-top: 1px solid var(--border); margin: 2rem 0;">')
+                    .replace(/^# (.*$)/gim, '<h1 style="font-size: 1.8rem; margin: 1rem 0; color: var(--primary);">$1</h1>')
+                    .replace(/^## (.*$)/gim, '<h2 style="font-size: 1.4rem; margin: 1rem 0; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem;">$1</h2>')
+                    .replace(/^### (.*$)/gim, '<h3 style="font-size: 1.2rem; margin: 1rem 0 0.5rem; color: var(--text-main);">$1</h3>')
+                    .replace(/^#### (.*$)/gim, '<h4 style="font-size: 1.1rem; margin: 0.8rem 0 0.3rem; font-weight: bold;">$1</h4>')
+                    .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 4px solid var(--primary); background: var(--bg-secondary); padding: 0.8rem; margin: 0.8rem 0; font-style: italic; border-radius: 0 8px 8px 0;">$1</blockquote>')
+                    .replace(/\*\*\*/g, '<hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">')
                     .replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*)\*/g, '<em>$1</em>')
-                    .replace(/!\[(.*?)\]\((.*?)\)/g, '<div class="report-img-container" style="margin: 20px 0;"><img src="$2" alt="$1" style="width:100%; border-radius:16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); object-fit: cover; max-height: 300px;"></div>')
+                    .replace(/!\[(.*?)\]\((.*?)\)/g, '<div class="report-img-container" style="margin: 15px 0;"><img src="$2" alt="$1" style="width:100%; border-radius:12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); object-fit: cover; max-height: 250px;"></div>')
                     .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">$1 <i class="fas fa-external-link-alt" style="font-size: 0.8em;"></i></a>')
-                    .replace(/^\* (.*$)/gim, '<li style="margin-bottom: 0.5rem; list-style-type: none;"><i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i> $1</li>')
+                    .replace(/^\* (.*$)/gim, '<li style="margin-bottom: 0.3rem; list-style-type: none;"><i class="fas fa-check-circle" style="color: var(--success); margin-right: 8px;"></i> $1</li>')
                     .replace(/\n/g, '<br>');
 
-                reportContent.innerHTML = `<div class="report-styled-content" style="padding: 1rem;">${html}</div>`;
+                reportContent.innerHTML = listenBtnHtml + `<div class="report-styled-content" style="padding: 0.5rem;">${html}</div>`;
+                
+                // Audio Logic for Report
+                const listenBtn = document.getElementById('listenToReportBtn');
+                const reportAudio = document.getElementById('reportAudio');
+                listenBtn.addEventListener('click', async () => {
+                    if (listenBtn.classList.contains('playing')) {
+                        reportAudio.pause();
+                        listenBtn.classList.remove('playing');
+                        listenBtn.querySelector('span').textContent = 'Listen to Report';
+                        return;
+                    }
+                    try {
+                        listenBtn.classList.add('loading');
+                        listenBtn.querySelector('span').textContent = 'Synthesizing...';
+                        const audioRes = await fetch('/api/news/report-speech', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: data.report })
+                        });
+                        const blob = await audioRes.blob();
+                        reportAudio.src = URL.createObjectURL(blob);
+                        reportAudio.play();
+                        listenBtn.classList.remove('loading');
+                        listenBtn.classList.add('playing');
+                        listenBtn.querySelector('span').textContent = 'Playing...';
+                    } catch (e) {
+                        alert('Audio failed');
+                        listenBtn.classList.remove('loading');
+                    }
+                });
+                reportAudio.onended = () => {
+                    listenBtn.classList.remove('playing');
+                    listenBtn.querySelector('span').textContent = 'Listen to Report';
+                };
             } else {
                 reportContent.innerHTML = '<p>Failed to generate strategy. Please try again.</p>';
             }

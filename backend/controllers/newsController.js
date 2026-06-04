@@ -133,47 +133,74 @@ async function getPodcast(req, res) {
     const { getNews } = require('../services/newsAggregator');
     const { OpenAI } = require('openai');
     
-    // 1. Fetch latest news (no strict time limit to ensure initial experience)
-    const news = await getNews({ limit: 20 });
+    // Fetch latest strategic news - NO 24h limit
+    const news = await getNews({ limit: 20, category: 'Strategic Insights' });
     
+    // Fallback to any news if no strategic found
+    let finalNews = news;
     if (news.length === 0) {
-      return res.status(404).json({ success: false, error: 'No news found to summarize. Please wait for the first sync.' });
+        finalNews = await getNews({ limit: 10 });
+    }
+    
+    if (finalNews.length === 0) {
+      return res.status(404).json({ success: false, error: 'No news found to summarize.' });
     }
 
-    // 2. Select top 5 "explosive" news using basic heuristic (or let AI decide)
-    // For now, let's pick 10 candidates and let AI choose
-    const candidates = news.slice(0, 15).map(n => `[${n.company}] ${n.title}: ${n.description}`).join('\n');
-
+    const candidates = finalNews.map(n => `[${n.company}] ${n.title}: ${n.description}`).join('\n');
     const client = new OpenAI();
     
-    // 3. Generate Podcast Script
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "你是一位资深的财经新闻主播，拥有富有磁性且专业的嗓音。请根据提供的新闻内容，创作一份约3分钟的中文播客脚本。重点分析最具战略意义的商业动态，语言要生动、专业且具有洞察力。脚本应包括开场白、核心新闻深度解读、行业影响分析以及简短的结语。" },
-        { role: "user", content: `以下是最新的公司动态：\n${candidates}` }
+        { role: "system", content: "你是一位资深的财经新闻主播，拥有富有磁性且专业的嗓音。请根据提供的新闻内容，创作一份约3分钟的中文播客脚本。重点分析最具战略意义的商业动态。脚本应包括开场白、核心新闻解读、行业影响以及结语。" },
+        { role: "user", content: `最新动态：\n${candidates}` }
       ]
     });
 
     const script = completion.choices[0].message.content;
-
-    // 4. Generate Speech (TTS) - Using 'onyx' for a more professional, deep anchor voice
     const mp3 = await client.audio.speech.create({
-      model: "tts-1-hd", // High definition for better quality
+      model: "tts-1",
       voice: "onyx",
       input: script,
     });
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
-    
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Content-Length': buffer.length
-    });
-    
+    res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
     res.send(buffer);
   } catch (error) {
-    console.error('Error generating podcast:', error);
+    console.error('Podcast Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+async function getReportSpeech(req, res) {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success: false, error: 'No text provided' });
+
+    const { OpenAI } = require('openai');
+    const client = new OpenAI();
+    
+    // Summary of the report for TTS to keep it concise
+    const summary = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+            { role: "system", content: "Summarize this strategic report into a 2-minute professional briefing script in Chinese." },
+            { role: "user", content: text }
+        ]
+    });
+
+    const mp3 = await client.audio.speech.create({
+      model: "tts-1",
+      voice: "onyx",
+      input: summary.choices[0].message.content,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
+    res.send(buffer);
+  } catch (error) {
+    console.error('Report Speech Error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 }

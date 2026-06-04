@@ -7,5 +7,6 @@ router.get('/sources', newsController.getSources);
 router.get('/company/:company', newsController.getCompanyNews);
 router.post('/aggregate', newsController.triggerAggregation);
 router.get('/podcast', newsController.getPodcast);
+router.post('/report-speech', newsController.getReportSpeech);
 router.get('/aggregation-status', newsController.getAggregationStatusEndpoint);
 module.exports = router;
