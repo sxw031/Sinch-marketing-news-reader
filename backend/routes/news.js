@@ -9,8 +9,7 @@ router.post('/aggregate', ctrl.triggerAggregation);
 router.get('/aggregation-status', ctrl.getAggregationStatus);
 router.get('/podcast', ctrl.getPodcast);
 router.post('/report-speech', ctrl.getReportSpeech);
-router.post('/ai/strategy', ctrl.generateStrategy);
-router.post('/ai/chat', ctrl.aiChat);
+// ai/strategy and ai/chat handled in server.js with enhanced logic
 router.get('/yearly-summary/:year', ctrl.getYearlySummary);
 router.get('/debug/stats', ctrl.getDebugStats);
 

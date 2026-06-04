@@ -66,22 +66,8 @@ async function loadCompanies() {
 }
 
 async function loadSources() {
-  try {
-    const res = await fetch(`${API_BASE}/sources`);
-    const data = await res.json();
-    if (data.success && data.data.length > 0) {
-      const select = document.getElementById('sourceFilter');
-      const currentVal = select.value;
-      select.innerHTML = '<option value="">All Sources</option>';
-      data.data.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        select.appendChild(opt);
-      });
-      select.value = currentVal;
-    }
-  } catch (e) { console.error('loadSources:', e); }
+  // Source dropdown is curated in HTML with optgroups
+  // No dynamic override needed - keep the professional categorized list
 }
 
 async function loadNews(silent = false) {
@@ -223,7 +209,7 @@ async function showYearlySummary(year) {
   const title = document.getElementById('yearlySummaryTitle');
   const content = document.getElementById('yearlySummaryContent');
 
-  title.textContent = `${year} Major Events Summary`;
+  title.textContent = year === 2026 ? `2026 Year-to-Date (as of today)` : `${year} Major Events Summary`;
   content.innerHTML = '<div style="text-align:center;padding:3rem;"><div class="spinner"></div><p>Loading summary...</p></div>';
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
@@ -243,8 +229,9 @@ async function showYearlySummary(year) {
 
 function renderYearlySummary(companies, year) {
   let html = `<div class="yearly-summary">`;
+  const dateLabel = companies[0]?.dateLabel || `Full Year ${year}`;
   html += `<div class="yearly-header"><h2>${year} Strategic Events Overview</h2>
-    <p>Key developments across ${companies.length} tracked accounts for Sinch CSM intelligence</p></div>`;
+    <p>${dateLabel} | Key developments across ${companies.length} tracked accounts for Sinch CSM intelligence</p></div>`;
 
   companies.forEach(c => {
     const relevanceClass = c.sinchRelevance === 'High' ? 'relevance-high' : c.sinchRelevance === 'Medium' ? 'relevance-medium' : 'relevance-low';
@@ -283,8 +270,8 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       const range = btn.dataset.range;
 
-      // If it's a year button (2023, 2024, 2025), show yearly summary modal
-      if (['2023', '2024', '2025'].includes(range)) {
+      // If it's a year button (2023, 2024, 2025, 2026), show yearly summary modal
+      if (['2023', '2024', '2025', '2026'].includes(range)) {
         showYearlySummary(parseInt(range));
         return;
       }
@@ -298,6 +285,7 @@ function setupEventListeners() {
         case '12h': now.setHours(now.getHours() - 12); break;
         case '24h': now.setHours(now.getHours() - 24); break;
         case '48h': now.setHours(now.getHours() - 48); break;
+        case '72h': now.setHours(now.getHours() - 72); break;
         case '1w': now.setDate(now.getDate() - 7); break;
         case '1m': now.setMonth(now.getMonth() - 1); break;
       }
@@ -485,7 +473,7 @@ function setupEventListeners() {
     input.value = '';
     const botMsg = appendChat('bot', 'Thinking...');
     try {
-      const res = await fetch('/api/news/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, context: allNews.slice(0, 15) }) });
+      const res = await fetch('/api/news/ai/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, context: allNews.slice(0, 50) }) });
       const data = await res.json();
       botMsg.innerHTML = renderMarkdown(data.answer || 'No answer available.');
     } catch (e) { botMsg.textContent = 'Connection error.'; }

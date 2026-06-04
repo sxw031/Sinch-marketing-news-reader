@@ -163,8 +163,8 @@ async function getYearlySummary(req, res) {
   try {
     const { year } = req.params;
     const yearNum = parseInt(year);
-    if (yearNum < 2023 || yearNum > 2025) {
-      return res.status(400).json({ success: false, error: 'Year must be 2023, 2024, or 2025' });
+    if (yearNum < 2023 || yearNum > 2026) {
+      return res.status(400).json({ success: false, error: 'Year must be 2023-2026' });
     }
     const summary = generateYearlySummary(yearNum);
     res.json({ success: true, year: yearNum, data: summary });

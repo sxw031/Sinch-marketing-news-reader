@@ -4,7 +4,7 @@
   "description": "Strategic news aggregator for 18 major companies - MarketFeed",
   "main": "backend/server.js",
   "scripts": {
-    "build": "npm install && pip install edge-tts",
+    "build": "npm install && pip install edge-tts || pip3 install edge-tts || true",
     "start": "node --max-old-space-size=450 backend/server.js",
     "dev": "nodemon backend/server.js"
   },

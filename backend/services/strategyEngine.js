@@ -64,6 +64,26 @@ const YEARLY_EVENTS = {
     'Binance': ['Full regulatory compliance achieved globally', 'Launched institutional prime services', 'Expanded Web3 enterprise solutions', 'Grew to 250M+ users'],
     'ShopBack': ['IPO preparation announced', 'Expanded to 12 markets', 'Launched merchant engagement platform', 'AI-powered personalization engine'],
     'Aeon Credit': ['Fully digital lending platform live', 'Expanded to 3 new SEA markets', 'AI customer engagement launched', 'Partnered with messaging platforms for notifications']
+  },
+  2026: {
+    'HSBC': ['Q1 earnings beat expectations with strong Asia growth', 'Expanded AI-driven wealth advisory to retail clients', 'Launched real-time cross-border payment corridor Asia-Europe', 'Partnered with Sinch competitor on WhatsApp Banking'],
+    'Grab': ['Launched GrabForBusiness enterprise platform', 'Expanded ride-hailing to Pakistan and Bangladesh', 'GrabFin reached 10M lending customers', 'AI-powered driver communication system deployed'],
+    'Vodafone': ['Three UK merger fully operational', 'Launched next-gen RCS platform for enterprise', 'Expanded 5G private networks for manufacturing', 'Announced CPaaS marketplace for SMBs'],
+    'Cathay Pacific': ['Record H1 2026 passenger traffic', 'Launched AI-powered rebooking and disruption messaging', 'Expanded cargo e-commerce logistics', 'Sustainability report showed 15% emission reduction'],
+    'Alibaba': ['Qwen AI model became top enterprise AI in China', 'International commerce revenue surpassed $15B', 'Launched AliExpress instant messaging for sellers', 'Cloud revenue grew 45% YoY'],
+    'Standard Chartered': ['Launched open banking APIs in 20 markets', 'AI fraud detection prevented $2B in losses', 'Expanded Mox digital bank to Singapore', 'Partnered on embedded finance messaging'],
+    'Temu': ['Shifted strategy to brand partnerships', 'Launched in-app live commerce with messaging', 'Regulatory compliance achieved in EU under DSA', 'Revenue growth stabilized at 25% YoY'],
+    'Ctrip': ['Became China\'s largest outbound travel platform', 'AI concierge handled 60% of customer queries', 'Launched Trip.com Business for corporate travel', 'Expanded hotel messaging and review platform'],
+    'Didi': ['Autonomous taxis launched in 3 Chinese cities', 'International expansion reached 12 countries', 'Launched enterprise fleet management APIs', 'In-app safety messaging system upgraded'],
+    'DBS': ['Named world\'s best bank for 5th consecutive year', 'Launched DBS Developer Portal 2.0', 'AI handled 85% of customer interactions', 'Expanded digital banking to Saudi Arabia'],
+    'Tencent': ['WeChat reached 1.4B MAU', 'Enterprise WeChat became dominant B2B tool in China', 'AI-powered mini-programs grew 60%', 'International cloud messaging expanded to LATAM'],
+    'Bank of China': ['Digital yuan cross-border pilot with 15 countries', 'Launched AI customer service across all branches', 'Green bond issuance exceeded $20B in H1', 'Mobile banking MAU surpassed 300M'],
+    'ByteDance': ['TikTok Shop GMV exceeded $50B globally', 'Doubao AI assistant reached 100M users', 'Launched Lark enterprise messaging globally', 'Revenue on track to exceed $250B'],
+    'Gojek': ['GoTo Group profitable for full year', 'GoPay became SEA\'s largest digital wallet', 'Launched GoEnterprise B2B services', 'AI-powered merchant notification system'],
+    'Citigroup': ['Completed 3-year digital transformation', 'Launched Citi Developer Hub for API banking', 'AI wealth advisory reached $100B AUM', 'Expanded institutional messaging infrastructure'],
+    'Binance': ['Reached 300M registered users', 'Launched regulated exchange in 10 new markets', 'Institutional custody AUM exceeded $50B', 'Web3 messaging integration for DeFi notifications'],
+    'ShopBack': ['Completed IPO on SGX', 'Expanded to 15 markets across APAC', 'ShopBack Pay reached 20M users', 'Launched AI-powered merchant engagement messaging'],
+    'Aeon Credit': ['Digital lending volume doubled YoY', 'Expanded Islamic fintech across SEA', 'Launched AI credit decisioning engine', 'Customer notification system upgraded to omnichannel']
   }
 };
 
@@ -74,9 +94,14 @@ function generateYearlySummary(year) {
   const events = YEARLY_EVENTS[year];
   if (!events) return [];
 
+  const today = new Date();
+  const isCurrentYear = year === today.getFullYear();
+  const dateLabel = isCurrentYear ? `As of ${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : `Full Year ${year}`;
+
   return Object.entries(events).map(([company, highlights]) => ({
     company,
     year,
+    dateLabel,
     highlights,
     sinchRelevance: assessSinchRelevance(highlights)
   }));

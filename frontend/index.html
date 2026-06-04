@@ -73,12 +73,14 @@
                     <button class="btn-quick-time" data-range="12h">12h</button>
                     <button class="btn-quick-time" data-range="24h">24h</button>
                     <button class="btn-quick-time" data-range="48h">48h</button>
+                    <button class="btn-quick-time" data-range="72h">72h</button>
                     <button class="btn-quick-time" data-range="1w">1w</button>
                     <button class="btn-quick-time" data-range="1m">1m</button>
                     <span class="time-divider">|</span>
                     <button class="btn-quick-time btn-yearly" data-range="2023">2023</button>
                     <button class="btn-quick-time btn-yearly" data-range="2024">2024</button>
                     <button class="btn-quick-time btn-yearly" data-range="2025">2025</button>
+                    <button class="btn-quick-time btn-yearly" data-range="2026">2026 (YTD)</button>
                 </div>
                 
                 <div class="filter-row">
@@ -98,10 +100,33 @@
                             <span class="filter-label">Source</span>
                             <select id="sourceFilter" class="filter-select">
                                 <option value="">All Sources</option>
-                                <option value="Official Website">Official Website</option>
-                                <option value="LinkedIn">LinkedIn</option>
-                                <option value="Bing News">Bing News</option>
-                                <option value="Google News">Google News</option>
+                                <optgroup label="Premium Sources">
+                                  <option value="LinkedIn">LinkedIn</option>
+                                  <option value="Official Website">Official Website</option>
+                                </optgroup>
+                                <optgroup label="Major Media">
+                                  <option value="Reuters">Reuters</option>
+                                  <option value="Bloomberg.com">Bloomberg</option>
+                                  <option value="WSJ">Wall Street Journal</option>
+                                  <option value="BBC">BBC</option>
+                                  <option value="South China Morning Post">South China Morning Post</option>
+                                </optgroup>
+                                <optgroup label="Financial">
+                                  <option value="Yahoo Finance">Yahoo Finance</option>
+                                  <option value="Seeking Alpha">Seeking Alpha</option>
+                                  <option value="MarketBeat">MarketBeat</option>
+                                  <option value="Investing.com">Investing.com</option>
+                                  <option value="CoinDesk">CoinDesk</option>
+                                </optgroup>
+                                <optgroup label="Tech & Industry">
+                                  <option value="Tech in Asia">Tech in Asia</option>
+                                  <option value="The Business Times">The Business Times</option>
+                                  <option value="NDTV Profit">NDTV Profit</option>
+                                </optgroup>
+                                <optgroup label="News Aggregators">
+                                  <option value="Google News">Google News</option>
+                                  <option value="Bing News">Bing News</option>
+                                </optgroup>
                             </select>
                         </div>
                         <button id="applyFiltersBtn" class="btn-icon-text btn-apply">Apply Filters</button>
