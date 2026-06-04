@@ -4,6 +4,7 @@ const COMPANIES = [
     name: 'HSBC',
     domain: 'hsbc.com',
     category: 'Finance',
+    logoUrl: 'https://www.hsbc.com/assets/img/hsbc-logo.svg',
     website: {
       url: 'https://www.hsbc.com/news-and-media/media-releases',
       selectors: {
@@ -20,6 +21,7 @@ const COMPANIES = [
     name: 'Grab',
     domain: 'grab.com',
     category: 'Technology',
+    logoUrl: 'https://assets.grab.com/wp-content/uploads/sites/4/2021/04/15151635/grab-logo.png',
     website: {
       url: 'https://www.grab.com/sg/press/',
       selectors: {
@@ -36,6 +38,7 @@ const COMPANIES = [
     name: 'Vodafone',
     domain: 'vodafone.com',
     category: 'Technology',
+    logoUrl: 'https://www.vodafone.com/etc.clientlibs/vodafone/clientlibs/clientlib-site/resources/images/vodafone-logo.svg',
     website: {
       url: 'https://www.vodafone.com/news',
       selectors: {
@@ -52,6 +55,7 @@ const COMPANIES = [
     name: 'Cathay Pacific',
     domain: 'cathaypacific.com',
     category: 'Aviation',
+    logoUrl: 'https://www.cathaypacific.com/content/dam/focal-point/digital-library/global/brand-assets/logo/cathay-pacific-logo-green-en.svg',
     website: {
       url: 'https://news.cathaypacific.com/',
       selectors: {
@@ -66,8 +70,9 @@ const COMPANIES = [
   {
     id: 'alibaba',
     name: 'Alibaba',
-    domain: 'alibabagroup.com',
+    domain: 'alibaba.com',
     category: 'Marketing',
+    logoUrl: 'https://s.alicdn.com/@sc02/kf/H98363721666d48299837965905187768j.png',
     website: {
       url: 'https://www.alizila.com/',
       selectors: {
@@ -164,6 +169,7 @@ const COMPANIES = [
     name: 'Tencent',
     domain: 'tencent.com',
     category: 'Technology',
+    logoUrl: 'https://www.tencent.com/img/index/menu-logo-en.png',
     website: {
       url: 'https://www.tencent.com/en-us/media.html',
       selectors: {
@@ -180,6 +186,7 @@ const COMPANIES = [
     name: 'Bank of China',
     domain: 'boc.cn',
     category: 'Finance',
+    logoUrl: 'https://www.boc.cn/apple-touch-icon.png',
     website: {
       url: 'https://www.boc.cn/en/aboutboc/ab1/index.html',
       selectors: {
@@ -196,6 +203,7 @@ const COMPANIES = [
     name: 'ByteDance',
     domain: 'bytedance.com',
     category: 'Technology',
+    logoUrl: 'https://sf16-scmcdn-sg.ibytedtos.com/obj/eden-sg/uvshz_lj_lp/ljhwz_lp/bytedance_logo_english.png',
     website: {
       url: 'https://www.bytedance.com/en/news',
       selectors: {

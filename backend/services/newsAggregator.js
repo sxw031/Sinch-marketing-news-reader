@@ -154,7 +154,7 @@ async function storeNews(articles, company) {
             article.source,
             article.imageUrl || '',
             article.category || 'General',
-            article.publishedAt ? new Date(article.publishedAt).toISOString() : new Date().toISOString(),
+            article.publishedAt ? new Date(article.publishedAt).toISOString().replace('Z', '') : new Date().toISOString().replace('Z', ''),
             article.author || 'Unknown'
           ]
         );
@@ -201,7 +201,8 @@ async function getNews(filters = {}) {
   }
   
   if (filters.startDate) {
-    sql += ' AND publishedAt >= ?';
+    // Ensure precise datetime comparison
+    sql += " AND datetime(publishedAt) >= datetime(?)";
     params.push(filters.startDate);
   }
   
@@ -237,7 +238,12 @@ async function getNews(filters = {}) {
 }
 
 function getAvailableCompanies() {
-  return COMPANIES.map(c => ({ id: c.id, name: c.name, category: c.category }));
+  return COMPANIES.map(c => ({ 
+    id: c.id, 
+    name: c.name, 
+    category: c.category, 
+    logoUrl: c.logoUrl 
+  }));
 }
 
 async function cleanupOldNews(daysToKeep = 30) {

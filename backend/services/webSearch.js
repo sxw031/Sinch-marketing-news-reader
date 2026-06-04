@@ -123,7 +123,7 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 url: link,
                 source: finalSource,
                 imageUrl: '',
-                publishedAt: new Date().toISOString(),
+                publishedAt: new Date().toISOString().replace('Z', ''),
                 author: finalSource,
                 company: company,
                 category: 'General'
@@ -189,7 +189,7 @@ async function scrapeOfficialWebsite(company, config) {
           url: link,
           source: 'Official Website',
           imageUrl: '',
-          publishedAt: dateText ? new Date(dateText).toISOString() : new Date().toISOString(),
+          publishedAt: dateText ? new Date(dateText).toISOString().replace('Z', '') : new Date().toISOString().replace('Z', ''),
           author: company,
           company: company,
           category: 'General'

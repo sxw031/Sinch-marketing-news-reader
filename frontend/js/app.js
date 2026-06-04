@@ -24,9 +24,7 @@ const companyDomains = {
     'Citigroup': 'citigroup.com',
     'Binance': 'binance.com',
     'ShopBack': 'shopback.com',
-    'Aeon Credit': 'aeoncredit.com.my',
-    'Shopee': 'shopee.com',
-    'Foodpanda': 'foodpanda.com'
+    'Aeon Credit': 'aeoncredit.com.my'
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -74,14 +72,18 @@ async function loadCompanies() {
 }
 
 function getLogoUrl(companyName, type = 'primary') {
+    // 1. Check if we have a direct logoUrl from availableCompanies
+    const company = availableCompanies.find(c => c.name === companyName);
+    if (company && company.logoUrl) return company.logoUrl;
+
     const domain = companyDomains[companyName];
     if (!domain) return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
     
-    // Use DDG Icons as primary (more reliable for some Chinese/International brands)
+    // 2. Use DDG Icons as primary (more reliable for some Chinese/International brands)
     if (type === 'primary') return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-    // Clearbit as secondary
+    // 3. Clearbit as secondary
     if (type === 'secondary') return `https://logo.clearbit.com/${domain}?size=128`;
-    // Google as tertiary
+    // 4. Google as tertiary
     if (type === 'tertiary') return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
     
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
@@ -150,9 +152,10 @@ async function loadNews(isExplicitRefresh = false) {
 
         let url = `${API_BASE}?limit=1000`;
         
-        // Use activeTimeRange if set by quick filters
+        // Use activeTimeRange if set by quick filters (ensure precise ISO format)
         if (activeTimeRange) {
-            url += `&startDate=${activeTimeRange}`;
+            const isoDate = new Date(activeTimeRange).toISOString().replace('Z', '');
+            url += `&startDate=${encodeURIComponent(isoDate)}`;
         }
         
         if (category) url += `&category=${encodeURIComponent(category)}`;
@@ -273,7 +276,8 @@ function setupEventListeners() {
         document.querySelectorAll('.company-item').forEach(item => item.classList.remove('selected'));
     });
 
-    document.getElementById('refreshBtn').addEventListener('click', () => loadNews(true));
+    document.getElementById('refreshBtn').addEventListener('click', () => triggerAggregation(false));
+    document.getElementById('fetchAllBtn').addEventListener('click', () => triggerAggregation(true));
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
     document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(); });
 
