@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const newsController = require('../controllers/newsController');
-router.get('/', newsController.getAllNews);
-router.get('/companies', newsController.getCompanies);
-router.get('/sources', newsController.getSources);
-router.get('/company/:company', newsController.getCompanyNews);
-router.post('/aggregate', newsController.triggerAggregation);
-router.get('/podcast', newsController.getPodcast);
-router.post('/report-speech', newsController.getReportSpeech);
-router.get('/aggregation-status', newsController.getAggregationStatusEndpoint);
+const ctrl = require('../controllers/newsController');
+
+router.get('/', ctrl.getAllNews);
+router.get('/companies', ctrl.getCompanies);
+router.get('/sources', ctrl.getSourcesList);
+router.post('/aggregate', ctrl.triggerAggregation);
+router.get('/aggregation-status', ctrl.getAggregationStatus);
+router.get('/podcast', ctrl.getPodcast);
+router.post('/report-speech', ctrl.getReportSpeech);
+router.get('/debug/stats', ctrl.getDebugStats);
+
 module.exports = router;

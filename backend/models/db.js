@@ -1,42 +1,56 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-// Use absolute path for reliability in container environments like Render
-const dbPath = path.resolve(process.cwd(), 'backend', 'news.db');
-console.log(`Using database at: ${dbPath}`);
 
-// Ensure the backend directory exists (it should, but safety first)
-const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
+// Use /tmp on Render (ephemeral but avoids path issues), or local for dev
+const dbDir = process.env.RENDER ? '/tmp' : path.join(__dirname, '..', 'data');
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+const dbPath = path.join(dbDir, 'news.db');
+console.log(`[DB] Path: ${dbPath}`);
+
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) console.error('Database error:', err.message);
-  else {
-    console.log('Connected to SQLite at', dbPath);
-    // Optimize SQLite for high concurrency and prevent locking warnings
-    db.run('PRAGMA journal_mode = WAL');
-    db.run('PRAGMA synchronous = NORMAL');
-    db.run('PRAGMA busy_timeout = 15000'); // 15s timeout
-    db.run('PRAGMA cache_size = -2000'); // 2MB cache
-    initializeDatabase();
-  }
+  if (err) { console.error('[DB] Connection error:', err.message); return; }
+  console.log('[DB] Connected');
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA synchronous = NORMAL');
+  db.run('PRAGMA busy_timeout = 10000');
+  initSchema();
 });
-function initializeDatabase() {
+
+function initSchema() {
   db.serialize(() => {
-    db.run(`CREATE TABLE IF NOT EXISTS news (id INTEGER PRIMARY KEY, company TEXT NOT NULL, title TEXT NOT NULL, description TEXT, url TEXT UNIQUE, source TEXT, imageUrl TEXT, category TEXT, publishedAt DATETIME, fetchedAt DATETIME DEFAULT CURRENT_TIMESTAMP, author TEXT, isRead BOOLEAN DEFAULT 0, isFavorite BOOLEAN DEFAULT 0, sentiment TEXT, UNIQUE(title, company))`);
+    db.run(`CREATE TABLE IF NOT EXISTS news (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      company TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      url TEXT,
+      source TEXT,
+      category TEXT DEFAULT 'General',
+      publishedAt TEXT,
+      fetchedAt TEXT DEFAULT (datetime('now')),
+      UNIQUE(title, company)
+    )`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_company ON news(company)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_publishedAt ON news(publishedAt)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_fetchedAt ON news(fetchedAt)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_published ON news(publishedAt DESC)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_source ON news(source)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_category ON news(category)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_filter ON news(company, publishedAt, category)`);
-    db.run(`CREATE INDEX IF NOT EXISTS idx_url ON news(url)`);
   });
 }
-const db_helpers = {
-  all: (sql, params = []) => new Promise((resolve, reject) => db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows))),
-  get: (sql, params = []) => new Promise((resolve, reject) => db.get(sql, params, (err, row) => err ? reject(err) : resolve(row))),
-  run: (sql, params = []) => new Promise((resolve, reject) => db.run(sql, params, function(err) { if (err) reject(err); else resolve({ id: this.lastID, changes: this.changes }); })),
-  close: () => new Promise((resolve, reject) => db.close((err) => err ? reject(err) : resolve()))
+
+const query = {
+  all: (sql, params = []) => new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
+  }),
+  get: (sql, params = []) => new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => err ? reject(err) : resolve(row));
+  }),
+  run: (sql, params = []) => new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  })
 };
-module.exports = { db, db_helpers };
+
+module.exports = { db, query };

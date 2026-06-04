@@ -1,36 +1,20 @@
 {
-  "name": "sinch-marketing-news-reader",
-  "version": "1.0.0",
-  "description": "Marketing news aggregator for 20 major companies",
+  "name": "marketfeed",
+  "version": "2.0.0",
+  "description": "Strategic news aggregator for 18 major companies - MarketFeed",
   "main": "backend/server.js",
   "scripts": {
     "start": "node --max-old-space-size=450 backend/server.js",
-    "dev": "nodemon backend/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon backend/server.js"
   },
-  "keywords": [
-    "news",
-    "aggregator",
-    "marketing",
-    "hsbc",
-    "grab",
-    "alibaba",
-    "didi",
-    "tencent",
-    "binance"
-  ],
-  "author": "",
-  "license": "UNLICENSED",
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "moment": "^2.29.4",
     "openai": "^6.41.0",
     "rss-parser": "^3.13.0",
     "sqlite3": "^5.1.6"

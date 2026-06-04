@@ -1,174 +1,130 @@
-const { getNews, getAvailableCompanies, aggregateAllNews } = require('../services/newsAggregator');
-async function getAllNews(req, res) {
-  try {
-    console.log('--- GET NEWS REQUEST ---');
-    console.log('Query Params:', JSON.stringify(req.query));
+const { aggregateAllNews, getNews, getNewsCount, getAvailableCompanies, getSources } = require('../services/newsAggregator');
+const { COMPANIES } = require('../config/sources');
 
-    const filters = { 
-      company: req.query.company, 
-      companies: req.query.companies ? req.query.companies.split(',').filter(c => c.trim()) : undefined, 
-      startDate: req.query.startDate, 
-      endDate: req.query.endDate, 
-      category: req.query.category, 
-      source: req.query.source,
-      search: req.query.search, 
-      limit: req.query.limit ? parseInt(req.query.limit) : 100 
-    };
-
-    // If companies is an empty array after filtering, set to undefined to show all
-    if (filters.companies && filters.companies.length === 0) {
-      filters.companies = undefined;
-    }
-
-    console.log('Applied Filters:', JSON.stringify(filters));
-    const news = await getNews(filters);
-    console.log(`Returning ${news.length} articles`);
-    res.json({ success: true, count: news.length, data: news });
-  } catch (error) {
-    console.error('Error getting news:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-async function getCompanyNews(req, res) {
-  try {
-    const { company } = req.params;
-    const { limit = 20 } = req.query;
-    const news = await getNews({ company, limit: parseInt(limit) });
-    res.json({ success: true, company, count: news.length, data: news });
-  } catch (error) {
-    console.error('Error getting company news:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-function getCompanies(req, res) {
-  try {
-    const companies = getAvailableCompanies();
-    res.json({ success: true, count: companies.length, data: companies });
-  } catch (error) {
-    console.error('Error getting companies:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-let isAggregating = false;
-let aggregationStatus = {
-    inProgress: false,
-    currentCompany: null,
-    completedCompanies: [],
-    totalCompanies: 0,
-    startTime: null,
-    errors: 0,
-    isFull: false
+// --- Aggregation State ---
+let aggregationState = {
+  inProgress: false,
+  currentCompany: null,
+  completedCompanies: [],
+  totalCompanies: COMPANIES.length,
+  startTime: null
 };
 
-function getAggregationStatus() {
-    return aggregationStatus;
+// --- Controllers ---
+
+async function getAllNews(req, res) {
+  try {
+    const filters = {
+      companies: req.query.companies ? req.query.companies.split(',').filter(Boolean) : undefined,
+      company: req.query.company,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      category: req.query.category,
+      source: req.query.source,
+      search: req.query.search,
+      limit: req.query.limit ? parseInt(req.query.limit) : 200
+    };
+    const news = await getNews(filters);
+    res.json({ success: true, count: news.length, data: news });
+  } catch (error) {
+    console.error('[API] getAllNews error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+function getCompanies(req, res) {
+  res.json({ success: true, data: getAvailableCompanies() });
+}
+
+async function getSourcesList(req, res) {
+  try {
+    const sources = await getSources();
+    res.json({ success: true, data: sources });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 }
 
 async function triggerAggregation(req, res) {
+  if (aggregationState.inProgress) {
+    return res.json({ success: true, message: 'Already in progress', status: aggregationState });
+  }
+
+  // Respond immediately, run in background
+  aggregationState = {
+    inProgress: true,
+    currentCompany: null,
+    completedCompanies: [],
+    totalCompanies: COMPANIES.length,
+    startTime: new Date().toISOString()
+  };
+  res.json({ success: true, message: 'Aggregation started' });
+
+  // Background execution
   try {
-    if (isAggregating) {
-      return res.json({ success: true, message: 'Aggregation is already in progress' });
-    }
-
-    const isFull = req.query.full === 'true';
-    const { COMPANIES } = require('../config/sources');
-    
-    isAggregating = true;
-    aggregationStatus = {
-        inProgress: true,
-        currentCompany: null,
-        completedCompanies: [],
-        totalCompanies: COMPANIES.length,
-        startTime: new Date(),
-        errors: 0,
-        isFull: isFull
-    };
-
-    res.json({ success: true, message: 'News aggregation started in background' });
-    
-    // Run in background
-    (async () => {
-      try {
-        await aggregateAllNews({
-            strategicOnly: !isFull,
-            onProgress: (companyName) => {
-                aggregationStatus.currentCompany = companyName;
-                if (!aggregationStatus.completedCompanies.includes(companyName)) {
-                    aggregationStatus.completedCompanies.push(companyName);
-                }
-            },
-            onError: (companyName, error) => {
-                aggregationStatus.errors++;
-                console.error(`Error aggregating ${companyName}:`, error);
-            }
-        });
-      } catch (error) {
-        console.error('Error in background aggregation:', error);
-      } finally {
-        isAggregating = false;
-        aggregationStatus.inProgress = false;
-        aggregationStatus.currentCompany = 'Completed';
+    await aggregateAllNews({
+      onProgress: (companyName) => {
+        aggregationState.currentCompany = companyName;
+        if (!aggregationState.completedCompanies.includes(companyName)) {
+          aggregationState.completedCompanies.push(companyName);
+        }
+      },
+      onError: (companyName, error) => {
+        console.error(`[Aggregation] ${companyName}: ${error}`);
       }
-    })();
-  } catch (error) {
-    console.error('Error triggering aggregation:', error);
-    isAggregating = false;
-    aggregationStatus.inProgress = false;
-    res.status(500).json({ success: false, error: error.message });
+    });
+  } catch (err) {
+    console.error('[Aggregation] Fatal:', err.message);
+  } finally {
+    aggregationState.inProgress = false;
+    aggregationState.currentCompany = null;
   }
 }
-async function getSources(req, res) {
-  try {
-    const { db_helpers } = require('../models/db');
-    const sources = await db_helpers.all('SELECT DISTINCT source FROM news ORDER BY source ASC');
-    res.json({ success: true, count: sources.length, data: sources.map(s => s.source) });
-  } catch (error) {
-    console.error('Error getting sources:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
+
+function getAggregationStatus(req, res) {
+  res.json({ success: true, status: aggregationState });
+}
+
+function getAggregationStateObj() {
+  return aggregationState;
 }
 
 async function getPodcast(req, res) {
   try {
-    const { getNews } = require('../services/newsAggregator');
     const { OpenAI } = require('openai');
-    
-    // Fetch latest strategic news - NO 24h limit
-    const news = await getNews({ limit: 20, category: 'Strategic Insights' });
-    
-    // Fallback to any news if no strategic found
-    let finalNews = news;
+    const client = new OpenAI();
+
+    // Get latest news from DB (no time restriction)
+    const news = await getNews({ limit: 15 });
     if (news.length === 0) {
-        finalNews = await getNews({ limit: 10 });
-    }
-    
-    if (finalNews.length === 0) {
-      return res.status(404).json({ success: false, error: 'No news found to summarize.' });
+      return res.status(404).json({ success: false, error: 'No news available yet. Please wait for sync to complete.' });
     }
 
-    const candidates = finalNews.map(n => `[${n.company}] ${n.title}: ${n.description}`).join('\n');
-    const client = new OpenAI();
-    
+    const newsContext = news.map(n => `[${n.company}] ${n.title}: ${n.description || ''}`).join('\n');
+
+    // Generate podcast script
     const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: 'gpt-4o-mini',
       messages: [
-        { role: "system", content: "你是一位资深的财经新闻主播，拥有富有磁性且专业的嗓音。请根据提供的新闻内容，创作一份约3分钟的中文播客脚本。重点分析最具战略意义的商业动态。脚本应包括开场白、核心新闻解读、行业影响以及结语。" },
-        { role: "user", content: `最新动态：\n${candidates}` }
+        { role: 'system', content: 'You are a professional business news anchor. Create a compelling 3-minute podcast script summarizing the key strategic developments. Use a warm, authoritative tone. Structure: brief intro, 3-4 key stories with analysis, closing thoughts. Keep it concise and insightful. Write in English.' },
+        { role: 'user', content: `Today\'s top business developments:\n${newsContext}` }
       ]
     });
 
     const script = completion.choices[0].message.content;
+
+    // Generate audio
     const mp3 = await client.audio.speech.create({
-      model: "tts-1",
-      voice: "onyx",
-      input: script,
+      model: 'tts-1-hd',
+      voice: 'onyx',
+      input: script
     });
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
     res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
     res.send(buffer);
   } catch (error) {
-    console.error('Podcast Error:', error);
+    console.error('[Podcast] Error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 }
@@ -180,33 +136,54 @@ async function getReportSpeech(req, res) {
 
     const { OpenAI } = require('openai');
     const client = new OpenAI();
-    
-    // Summary of the report for TTS to keep it concise
+
     const summary = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-            { role: "system", content: "Summarize this strategic report into a 2-minute professional briefing script in Chinese." },
-            { role: "user", content: text }
-        ]
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'Summarize this strategic report into a 2-minute professional audio briefing script. Be concise, highlight key action items.' },
+        { role: 'user', content: text }
+      ]
     });
 
     const mp3 = await client.audio.speech.create({
-      model: "tts-1",
-      voice: "onyx",
-      input: summary.choices[0].message.content,
+      model: 'tts-1',
+      voice: 'onyx',
+      input: summary.choices[0].message.content
     });
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
     res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
     res.send(buffer);
   } catch (error) {
-    console.error('Report Speech Error:', error);
+    console.error('[ReportSpeech] Error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 }
 
-function getAggregationStatusEndpoint(req, res) {
-    res.json({ success: true, data: aggregationStatus });
+async function getDebugStats(req, res) {
+  try {
+    const count = await getNewsCount();
+    const mem = process.memoryUsage();
+    res.json({
+      success: true,
+      db: { newsCount: count },
+      memory: { rss: `${Math.round(mem.rss / 1024 / 1024)}MB`, heap: `${Math.round(mem.heapUsed / 1024 / 1024)}MB` },
+      uptime: Math.round(process.uptime()),
+      aggregation: aggregationState
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 }
 
-module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus, getPodcast, getReportSpeech, getAggregationStatusEndpoint };
+module.exports = {
+  getAllNews,
+  getCompanies,
+  getSourcesList,
+  triggerAggregation,
+  getAggregationStatus,
+  getAggregationStateObj,
+  getPodcast,
+  getReportSpeech,
+  getDebugStats
+};
