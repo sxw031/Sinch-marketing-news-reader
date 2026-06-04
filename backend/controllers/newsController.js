@@ -128,4 +128,60 @@ async function getSources(req, res) {
   }
 }
 
-module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus };
+async function getPodcast(req, res) {
+  try {
+    const { getNews } = require('../services/newsAggregator');
+    const { OpenAI } = require('openai');
+    
+    // 1. Fetch today's news (last 24h)
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const news = await getNews({ startDate: yesterday.toISOString() });
+    
+    if (news.length === 0) {
+      return res.status(404).json({ success: false, error: 'No news found in the last 24 hours to summarize.' });
+    }
+
+    // 2. Select top 5 "explosive" news using basic heuristic (or let AI decide)
+    // For now, let's pick 10 candidates and let AI choose
+    const candidates = news.slice(0, 15).map(n => `[${n.company}] ${n.title}: ${n.description}`).join('\n');
+
+    const client = new OpenAI();
+    
+    // 3. Generate Podcast Script
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "You are a professional financial news anchor. Create a concise, energetic 3-minute podcast script in Chinese based on the provided news. Focus only on the most 'explosive' and strategic updates. Start with a warm welcome and end with a quick wrap-up. Use a natural, conversational tone." },
+        { role: "user", content: `Here are the latest company updates:\n${candidates}` }
+      ]
+    });
+
+    const script = completion.choices[0].message.content;
+
+    // 4. Generate Speech (TTS)
+    const mp3 = await client.audio.speech.create({
+      model: "tts-1",
+      voice: "alloy",
+      input: script,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': buffer.length
+    });
+    
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error generating podcast:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+function getAggregationStatusEndpoint(req, res) {
+    res.json({ success: true, data: aggregationStatus });
+}
+
+module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus, getPodcast, getAggregationStatusEndpoint };

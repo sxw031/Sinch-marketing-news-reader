@@ -280,6 +280,48 @@ function setupEventListeners() {
     document.getElementById('refreshBtn').addEventListener('click', () => triggerAggregation(false));
     document.getElementById('fetchAllBtn').addEventListener('click', () => triggerAggregation(true));
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews(false, false));
+    
+    // Podcast Logic
+    const podcastBtn = document.getElementById('podcastBtn');
+    const podcastPlayer = document.getElementById('podcastPlayer');
+    
+    podcastBtn.addEventListener('click', async () => {
+        if (podcastBtn.classList.contains('playing')) {
+            podcastPlayer.pause();
+            podcastBtn.classList.remove('playing');
+            podcastBtn.querySelector('span').textContent = 'Daily Podcast';
+            return;
+        }
+
+        try {
+            podcastBtn.classList.add('loading');
+            podcastBtn.querySelector('span').textContent = 'Generating...';
+            
+            // Request podcast audio from backend
+            const response = await fetch(`${API_BASE}/podcast`);
+            if (!response.ok) throw new Error('Failed to generate podcast');
+            
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            
+            podcastPlayer.src = url;
+            podcastPlayer.play();
+            
+            podcastBtn.classList.remove('loading');
+            podcastBtn.classList.add('playing');
+            podcastBtn.querySelector('span').textContent = 'Playing...';
+            
+            podcastPlayer.onended = () => {
+                podcastBtn.classList.remove('playing');
+                podcastBtn.querySelector('span').textContent = 'Daily Podcast';
+            };
+        } catch (error) {
+            console.error('Podcast error:', error);
+            alert('Could not generate podcast. Make sure there is news from the last 24h.');
+            podcastBtn.classList.remove('loading');
+            podcastBtn.querySelector('span').textContent = 'Daily Podcast';
+        }
+    });
     document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(false, false); });
 
     // Logo click to reset everything and show all with default 24h filter
