@@ -55,7 +55,8 @@ async function fetchNewsForCompany(company) {
     console.log(`Fetching Premium Sources (Official & LinkedIn) for ${company}...`);
     const premiumNews = await searchAllPremiumSources(company, { 
         limit: 10,
-        domain: companyConfig.domain 
+        domain: companyConfig.domain,
+        website: companyConfig.website
     });
     allNews = allNews.concat(premiumNews);
   } catch (error) {

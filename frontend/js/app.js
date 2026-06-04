@@ -113,7 +113,7 @@ function updateSelectionLabel() {
     else label.textContent = `${count} Companies`;
 }
 
-async function loadNews(isExplicitRefresh = false) {
+async function loadNews(isExplicitRefresh = false, startDate = null) {
     showLoading(true);
     try {
         const category = document.getElementById('categoryFilter').value;
@@ -126,6 +126,7 @@ async function loadNews(isExplicitRefresh = false) {
         }
 
         let url = `${API_BASE}?limit=1000`;
+        if (startDate) url += `&startDate=${startDate}`;
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (source) url += `&source=${encodeURIComponent(source)}`;
         if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
@@ -143,6 +144,11 @@ async function loadNews(isExplicitRefresh = false) {
     } finally {
         showLoading(false);
     }
+}
+
+async function loadNewsWithTimeRange(startDate) {
+    // We pass the explicit ISO string to the backend
+    await loadNews(false, startDate);
 }
 
 function renderNews() {
@@ -254,16 +260,17 @@ function setupEventListeners() {
             const now = new Date();
             let start = new Date();
             switch(range) {
-                case '3h': start.setHours(now.getHours() - 3); break;
+                case '6h': start.setHours(now.getHours() - 6); break;
+                case '12h': start.setHours(now.getHours() - 12); break;
                 case '24h': start.setHours(now.getHours() - 24); break;
                 case '48h': start.setHours(now.getHours() - 48); break;
                 case '1w': start.setDate(now.getDate() - 7); break;
                 case '1m': start.setMonth(now.getMonth() - 1); break;
-                case '3m': start.setMonth(now.getMonth() - 3); break;
             }
-            // Use a temporary filter approach for quick time
-            allNews = allNews.filter(n => new Date(n.publishedAt) >= start);
-            renderNews();
+            
+            // Re-fetch with explicit start date to ensure we get news from the source's timeline
+            const startDateStr = start.toISOString();
+            loadNewsWithTimeRange(startDateStr);
         });
     });
 

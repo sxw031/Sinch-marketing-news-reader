@@ -5,16 +5,15 @@ const COMPANIES = [
     domain: 'hsbc.com',
     category: 'Finance',
     website: {
-      url: 'https://www.hsbc.com/news',
+      url: 'https://www.hsbc.com/news-and-media/media-releases',
       selectors: {
-        container: 'article.news-item, div.news-card',
-        title: 'h3, .news-title, a.news-link',
-        description: 'p.summary, .news-description',
-        link: 'a.news-link, a[href*="/news/"]',
-        date: 'time, .news-date, .published-date'
+        container: 'article, .news-item, .card',
+        title: 'h2, h3, .title',
+        description: 'p.summary, .description',
+        link: 'a',
+        date: 'time, .date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.hsbc.com/news-and-media/media-releases?rss=1'}]
+    }
   },
   {
     id: 'grab',
@@ -22,16 +21,15 @@ const COMPANIES = [
     domain: 'grab.com',
     category: 'Technology',
     website: {
-      url: 'https://www.grab.com/press/',
+      url: 'https://www.grab.com/sg/press/',
       selectors: {
-        container: 'article, div.press-release',
+        container: 'article, .press-release',
         title: 'h2, h3, .title',
-        description: 'p, .description',
-        link: 'a[href*="/press/"], a',
+        description: 'p',
+        link: 'a',
         date: 'time, .date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.grab.com/sg/press/feed/'}]
+    }
   },
   {
     id: 'vodafone',
@@ -41,14 +39,13 @@ const COMPANIES = [
     website: {
       url: 'https://www.vodafone.com/news',
       selectors: {
-        container: 'article, div.news-item',
-        title: 'h2, h3, a',
+        container: 'article, .news-item',
+        title: 'h2, h3, .title',
         description: 'p',
         link: 'a',
         date: 'time, .date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.vodafone.com/news/feed'}]
+    }
   },
   {
     id: 'cathay',
@@ -58,31 +55,29 @@ const COMPANIES = [
     website: {
       url: 'https://www.cathaypacific.com/cx/en/about-us/press-release.html',
       selectors: {
-        container: 'article, div.press-item',
-        title: 'h3, a.news-link',
+        container: '.press-item, article',
+        title: 'h3, .title',
         description: 'p',
         link: 'a',
-        date: 'time, .date'
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'alibaba',
     name: 'Alibaba',
-    domain: 'alibaba.com',
+    domain: 'alibabagroup.com',
     category: 'Marketing',
     website: {
-      url: 'https://www.alibabagroup.com/en/news',
+      url: 'https://www.alibabagroup.com/en-US/about-alibaba-news',
       selectors: {
-        container: 'div.news-item, article',
-        title: 'h3, a.title',
-        description: 'p.summary',
-        link: 'a.title, a[href*="/news/"]',
-        date: 'span.date, time'
+        container: '.news-item, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'standard-chartered',
@@ -92,22 +87,29 @@ const COMPANIES = [
     website: {
       url: 'https://www.sc.com/en/news-and-media/',
       selectors: {
-        container: 'article, div.news-item',
-        title: 'h2, h3, a',
+        container: 'article, .news-item',
+        title: 'h2, h3, .title',
         description: 'p',
         link: 'a',
         date: 'time, .date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.sc.com/en/feed/'}]
+    }
   },
   {
     id: 'temu',
     name: 'Temu',
     domain: 'temu.com',
     category: 'Marketing',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.temu.com/news.html',
+      selectors: {
+        container: 'article, .news-item',
+        title: 'h2, h3, .title',
+        description: 'p',
+        link: 'a',
+        date: 'time, .date'
+      }
+    }
   },
   {
     id: 'ctrip',
@@ -115,32 +117,47 @@ const COMPANIES = [
     domain: 'trip.com',
     category: 'General',
     website: {
-      url: 'https://ir.ctrip.com/news-releases',
+      url: 'https://ir.trip.com/news-releases',
       selectors: {
-        container: 'div.release, article.news-item',
-        title: 'h3, a.title',
+        container: '.news-release, article',
+        title: 'h3, .title',
         description: 'p',
-        link: 'a.title, a[href*="/news/"]',
-        date: 'time, .date, span.date'
+        link: 'a',
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'didi',
     name: 'Didi',
     domain: 'didiglobal.com',
     category: 'Technology',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.didiglobal.com/news',
+      selectors: {
+        container: 'article, .news-item',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'pdd',
     name: 'PDD',
-    domain: 'pinduoduo.com',
+    domain: 'pinduoduo-global.com',
     category: 'Marketing',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://investor.pddholdings.com/news-releases',
+      selectors: {
+        container: '.news-release, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'dbs',
@@ -148,16 +165,15 @@ const COMPANIES = [
     domain: 'dbs.com',
     category: 'Finance',
     website: {
-      url: 'https://www.dbs.com/newsroom',
+      url: 'https://www.dbs.com/newsroom/default.page',
       selectors: {
-        container: 'article, div.news-item',
-        title: 'h3, a.news-title',
-        description: 'p.summary, p',
-        link: 'a.news-link, a[href*="/newsroom/"]',
-        date: 'time, .date'
+        container: 'article, .news-item',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.dbs.com/newsroom/default.page?rss=1'}]
+    }
   },
   {
     id: 'tencent',
@@ -167,14 +183,13 @@ const COMPANIES = [
     website: {
       url: 'https://www.tencent.com/en-us/news.html',
       selectors: {
-        container: 'div.news-item, li.list-item',
-        title: 'h3, a, span.title',
+        container: '.news-item, article',
+        title: 'h3, .title',
         description: 'p',
         link: 'a',
-        date: 'span.date, time'
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'bankofchina',
@@ -182,32 +197,47 @@ const COMPANIES = [
     domain: 'boc.cn',
     category: 'Finance',
     website: {
-      url: 'https://www.boc.cn/en/index.html',
+      url: 'https://www.boc.cn/en/aboutboc/ab1/index.html',
       selectors: {
-        container: 'div.news-item',
-        title: 'h3, a',
+        container: '.news-item, article',
+        title: 'h3, .title',
         description: 'p',
         link: 'a',
-        date: 'span.date'
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'bytedance',
     name: 'ByteDance',
     domain: 'bytedance.com',
     category: 'Technology',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.bytedance.com/en/news',
+      selectors: {
+        container: '.news-item, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'gojek',
     name: 'Gojek',
     domain: 'gojek.com',
     category: 'Technology',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.gojek.com/en-id/news/',
+      selectors: {
+        container: '.news-item, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'citigroup',
@@ -215,16 +245,15 @@ const COMPANIES = [
     domain: 'citigroup.com',
     category: 'Finance',
     website: {
-      url: 'https://www.citigroup.com/citi/news',
+      url: 'https://www.citigroup.com/global/news/press-releases',
       selectors: {
-        container: 'article, div.news-item',
-        title: 'h2, h3, a.title',
-        description: 'p.description, p',
-        link: 'a[href*="/news/"], a.title',
-        date: 'time, span.date'
+        container: 'article, .press-release',
+        title: 'h2, h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
       }
-    },
-    sources: []
+    }
   },
   {
     id: 'gov-singapore',
@@ -234,38 +263,61 @@ const COMPANIES = [
     website: {
       url: 'https://www.gov.sg/news',
       selectors: {
-        container: 'article, div.news-item',
-        title: 'h3, a.title',
+        container: 'article, .news-item',
+        title: 'h3, .title',
         description: 'p',
         link: 'a',
-        date: 'time, .date'
+        date: '.date'
       }
-    },
-    sources: [{type: 'rss', url: 'https://www.gov.sg/rss'}]
+    }
   },
   {
     id: 'binance',
     name: 'Binance',
     domain: 'binance.com',
     category: 'Finance',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.binance.com/en/blog/news',
+      selectors: {
+        container: 'article, .blog-item',
+        title: 'h2, h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'shopback',
     name: 'ShopBack',
     domain: 'shopback.com',
     category: 'Marketing',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://corporate.shopback.com/news',
+      selectors: {
+        container: '.news-item, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   },
   {
     id: 'aeoncredit',
     name: 'Aeon Credit',
     domain: 'aeoncredit.com.my',
     category: 'Finance',
-    website: null,
-    sources: []
+    website: {
+      url: 'https://www.aeoncredit.com.my/about-us/news-announcements',
+      selectors: {
+        container: '.news-item, article',
+        title: 'h3, .title',
+        description: 'p',
+        link: 'a',
+        date: '.date'
+      }
+    }
   }
 ];
 

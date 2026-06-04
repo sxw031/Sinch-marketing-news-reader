@@ -5,18 +5,20 @@ const path = require('path');
 const moment = require('moment');
 const newsRoutes = require('./routes/news');
 const { aggregateAllNews, cleanupOldNews } = require('./services/newsAggregator');
+const { generateHeuristicReport } = require('./services/strategyEngine');
 const { OpenAI } = require('openai');
 const app = express();
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 let openai = null;
 
-if (openaiApiKey && openaiApiKey !== 'your_openai_api_key_here') {
+// Only initialize if it looks like a real key (starts with sk-)
+if (openaiApiKey && openaiApiKey.startsWith('sk-')) {
     openai = new OpenAI({
         apiKey: openaiApiKey
     });
 } else {
-    console.warn('WARNING: OPENAI_API_KEY is not set. AI features will be disabled or run in mock mode.');
+    console.warn('WARNING: Valid OPENAI_API_KEY not found. Using Heuristic Engine for strategy and mock mode for chat.');
 }
 // Use PORT provided by environment (Render) or default to 3000
 const PORT = process.env.PORT || 3000;
@@ -67,24 +69,23 @@ app.post('/api/news/ai/strategy', async (req, res) => {
     try {
         const { news } = req.body;
         
-        if (!openai) {
-            return res.json({ 
-                success: true, 
-                report: "AI Strategy Report is currently in demo mode. Please configure your OPENAI_API_KEY to generate professional strategic plans." 
+        // Use OpenAI if available, otherwise fallback to Heuristic Engine
+        if (openai) {
+            console.log('Generating strategy using OpenAI...');
+            const newsStr = news.map(n => `- [${n.company}] ${n.title}: ${n.description}`).join('\n');
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "You are a Senior Customer Success Manager at Sinch. Based on the provided strategic news about clients, generate a marketing analysis report and a strategic plan. Focus on opportunities for Sinch to help these clients grow or solve problems." },
+                    { role: "user", content: `Strategic News:\n${newsStr}` }
+                ]
             });
+            return res.json({ success: true, report: response.choices[0].message.content });
+        } else {
+            console.log('Generating strategy using Heuristic Engine (No API Key)...');
+            const report = generateHeuristicReport(news);
+            return res.json({ success: true, report: report });
         }
-
-        const newsStr = news.map(n => `- [${n.company}] ${n.title}: ${n.description}`).join('\n');
-        
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                { role: "system", content: "You are a Senior Customer Success Manager at Sinch. Based on the provided strategic news about clients, generate a marketing analysis report and a strategic plan. Focus on opportunities for Sinch to help these clients grow or solve problems." },
-                { role: "user", content: `Strategic News:\n${newsStr}` }
-            ]
-        });
-        
-        res.json({ success: true, report: response.choices[0].message.content });
     } catch (error) {
         console.error('AI Strategy Error:', error);
         res.status(500).json({ success: false, error: error.message });

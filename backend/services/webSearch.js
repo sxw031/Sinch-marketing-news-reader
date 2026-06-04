@@ -122,25 +122,78 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
 /**
  * Main search function that aggregates from multiple premium sources
  */
-async function searchAllPremiumSources(company, options = {}) {
-  const premiumSources = [
-    { site: 'linkedin.com', name: 'LinkedIn' },
-    { site: 'nytimes.com', name: 'New York Times' },
-    { site: 'wsj.com', name: 'Wall Street Journal' },
-    { site: 'bloomberg.com', name: 'Bloomberg' },
-    { site: 'dw.com', name: 'DW' },
-    { site: 'techcrunch.com', name: 'TechCrunch' }
-  ];
+/**
+ * Direct scraping of official websites
+ */
+async function scrapeOfficialWebsite(company, config) {
+  if (!config || !config.url) return [];
+  
+  try {
+    console.log(`Directly scraping official website for ${company}: ${config.url}`);
+    const response = await fetchWithRetry(config.url);
+    const $ = cheerio.load(response.data);
+    const articles = [];
+    const selectors = config.selectors || {
+        container: 'article, .news-item',
+        title: 'h2, h3, .title',
+        description: 'p',
+        link: 'a',
+        date: 'time, .date'
+    };
 
-  if (options.domain) {
-    premiumSources.push({ site: options.domain, name: 'Official Website' });
+    $(selectors.container).each((i, el) => {
+      if (articles.length >= 10) return false;
+      const $el = $(el);
+      const title = $el.find(selectors.title).first().text().trim();
+      let link = $el.find(selectors.link).first().attr('href');
+      const description = $el.find(selectors.description).first().text().trim();
+      const dateText = $el.find(selectors.date).first().text().trim();
+
+      if (title && link) {
+        if (link.startsWith('/')) {
+            const urlObj = new URL(config.url);
+            link = urlObj.origin + link;
+        } else if (!link.startsWith('http')) {
+            link = config.url.replace(/\/$/, '') + '/' + link.replace(/^\//, '');
+        }
+
+        articles.push({
+          title,
+          description: description || 'Official update from ' + company,
+          url: link,
+          source: 'Official Website',
+          imageUrl: '',
+          publishedAt: dateText ? new Date(dateText).toISOString() : new Date().toISOString(),
+          author: company,
+          company: company,
+          category: 'General'
+        });
+      }
+    });
+    return articles;
+  } catch (error) {
+    console.error(`Direct scrape failed for ${company}:`, error.message);
+    return [];
+  }
+}
+
+async function searchAllPremiumSources(company, options = {}) {
+  const allResults = [];
+  
+  // 1. Try Direct Scrape first if website config exists
+  if (options.website) {
+    const directResults = await scrapeOfficialWebsite(company, options.website);
+    allResults.push(...directResults);
   }
 
-  const allResults = [];
-  for (const source of premiumSources) {
-    const results = await searchSiteNews(company, source.site, source.name, options);
-    allResults.push(...results);
-    await sleep(500 + Math.random() * 500);
+  // 2. LinkedIn Search (High Priority)
+  const linkedInResults = await searchSiteNews(company, 'linkedin.com', 'LinkedIn', options);
+  allResults.push(...linkedInResults);
+
+  // 3. Fallback to Official Website Search if direct scrape found nothing
+  if (allResults.length === 0 && options.domain) {
+    const officialSearchResults = await searchSiteNews(company, options.domain, 'Official Website', options);
+    allResults.push(...officialSearchResults);
   }
 
   return allResults;
