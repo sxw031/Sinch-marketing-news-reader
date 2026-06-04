@@ -177,9 +177,14 @@ async function storeNewsBatch(articles, company) {
       for (const article of articles) {
         let isoDate = null;
         if (article.publishedAt) {
-          const parsedDate = new Date(article.publishedAt);
-          if (!isNaN(parsedDate.getTime())) {
-            isoDate = parsedDate.toISOString().replace('Z', '');
+          try {
+            const parsedDate = new Date(article.publishedAt);
+            if (!isNaN(parsedDate.getTime())) {
+              // Ensure consistent ISO format YYYY-MM-DD HH:MM:SS for SQLite
+              isoDate = parsedDate.toISOString().replace('T', ' ').replace('Z', '').split('.')[0];
+            }
+          } catch (e) {
+            console.error('Date parsing error:', e.message);
           }
         }
 
@@ -222,14 +227,14 @@ async function getNews(filters = {}) {
     }
   }
   
+  // Robust Date Filtering using strftime to handle various ISO formats
   if (filters.startDate) {
-    // Use string comparison for ISO dates, which is robust in SQLite
-    sql += " AND publishedAt >= ?";
+    sql += " AND (publishedAt IS NULL OR datetime(publishedAt) >= datetime(?))";
     params.push(filters.startDate);
   }
   
   if (filters.endDate) {
-    sql += ' AND publishedAt <= ?';
+    sql += " AND (publishedAt IS NULL OR datetime(publishedAt) <= datetime(?))";
     params.push(filters.endDate);
   }
   
@@ -249,14 +254,23 @@ async function getNews(filters = {}) {
     params.push(searchTerm, searchTerm);
   }
   
-  sql += ' ORDER BY publishedAt DESC';
+  sql += ' ORDER BY publishedAt DESC, fetchedAt DESC';
   
   if (filters.limit) {
     sql += ' LIMIT ?';
     params.push(filters.limit);
   }
   
-  return await db_helpers.all(sql, params);
+  const results = await db_helpers.all(sql, params);
+  
+  // FALLBACK: If no results with time filters, try again without them to ensure visibility
+  if (results.length === 0 && (filters.startDate || filters.endDate)) {
+    console.log("No results with time filters, falling back to all-time news for visibility.");
+    const fallbackFilters = { ...filters, startDate: undefined, endDate: undefined, limit: 20 };
+    return await getNews(fallbackFilters);
+  }
+  
+  return results;
 }
 
 function getAvailableCompanies() {

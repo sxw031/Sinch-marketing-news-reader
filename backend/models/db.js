@@ -1,19 +1,14 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-let dbPath = process.env.DB_PATH || path.resolve(__dirname, '../news.db');
+// Use absolute path for reliability in container environments like Render
+const dbPath = path.resolve(process.cwd(), 'backend', 'news.db');
+console.log(`Using database at: ${dbPath}`);
 
+// Ensure the backend directory exists (it should, but safety first)
 const dataDir = path.dirname(dbPath);
-if (dataDir !== process.cwd()) {
-    try {
-        if (!fs.existsSync(dataDir)) {
-            console.log(`Creating data directory: ${dataDir}`);
-            fs.mkdirSync(dataDir, { recursive: true });
-        }
-    } catch (e) {
-        console.error(`Error creating data directory: ${e.message}. Falling back to current directory.`);
-        dbPath = path.join(process.cwd(), 'news.db');
-    }
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
 }
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Database error:', err.message);
