@@ -54,9 +54,11 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
 
     let queries = [];
     if (site === 'linkedin.com') {
+      // Precise LinkedIn targeting to avoid generic profile results
       queries = [
-        `site:linkedin.com/company "${company}"`,
-        `"${company}" LinkedIn news`
+        `site:linkedin.com/posts "${company}"`,
+        `site:linkedin.com/company "${company}" updates`,
+        `"${company}" intitle:LinkedIn`
       ];
     } else if (site) {
       queries = [
@@ -69,8 +71,9 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
     let articles = [];
     
     for (const query of queries) {
-      // Add a small jitter delay to avoid being blocked
-      await sleep(1000 + Math.random() * 1000);
+      // Smart Jitter: LinkedIn needs more "gentle" treatment to avoid 403s
+      const baseDelay = site === 'linkedin.com' ? 2500 : 800;
+      await sleep(baseDelay + Math.random() * 1500);
       
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       try {
@@ -116,13 +119,30 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 } catch (e) {}
               }
 
+              // Enhanced Time Extraction for LinkedIn/Web
+              let publishedAt = new Date().toISOString().replace('Z', '');
+              
+              // Look for time indicators in description (e.g., "3 hours ago", "2 days ago")
+              const timeMatch = description.match(/(\d+)\s+(minute|hour|day|week|month)s?\s+ago/i);
+              if (timeMatch) {
+                const amount = parseInt(timeMatch[1]);
+                const unit = timeMatch[2].toLowerCase();
+                const date = new Date();
+                if (unit.includes('minute')) date.setMinutes(date.getMinutes() - amount);
+                else if (unit.includes('hour')) date.setHours(date.getHours() - amount);
+                else if (unit.includes('day')) date.setDate(date.getDate() - amount);
+                else if (unit.includes('week')) date.setDate(date.getDate() - amount * 7);
+                else if (unit.includes('month')) date.setMonth(date.getMonth() - amount);
+                publishedAt = date.toISOString().replace('Z', '');
+              }
+
               articles.push({
                 title,
                 description: description || 'No description available',
                 url: link,
                 source: finalSource,
                 imageUrl: '',
-                publishedAt: new Date().toISOString().replace('Z', ''),
+                publishedAt: publishedAt,
                 author: finalSource,
                 company: company,
                 category: 'General'
@@ -205,17 +225,20 @@ async function scrapeOfficialWebsite(company, config) {
 async function searchAllPremiumSources(company, options = {}) {
   const allResults = [];
   
-  // 1. Try Direct Scrape first if website config exists
+  // 1. LinkedIn Search (Top Strategic Priority)
+  const linkedInResults = await searchSiteNews(company, 'linkedin.com', 'LinkedIn', options);
+  allResults.push(...linkedInResults);
+
+  // Cool down slightly between sources to avoid rate limits
+  await sleep(2000);
+
+  // 2. Try Direct Scrape if website config exists
   if (options.website) {
     const directResults = await scrapeOfficialWebsite(company, options.website);
     allResults.push(...directResults);
   }
 
-  // 2. LinkedIn Search (High Priority)
-  const linkedInResults = await searchSiteNews(company, 'linkedin.com', 'LinkedIn', options);
-  allResults.push(...linkedInResults);
-
-  // 3. Fallback to Official Website Search if direct scrape found nothing
+  // 3. Fallback to Official Website Search if needed
   if (allResults.length === 0 && options.domain) {
     const officialSearchResults = await searchSiteNews(company, options.domain, 'Official Website', options);
     allResults.push(...officialSearchResults);
