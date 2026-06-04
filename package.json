@@ -4,7 +4,7 @@
   "description": "Marketing news aggregator for 20 major companies",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node --expose-gc --max-old-space-size=450 backend/server.js",
+    "start": "node --max-old-space-size=450 backend/server.js",
     "dev": "nodemon backend/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

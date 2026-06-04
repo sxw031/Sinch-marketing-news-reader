@@ -272,7 +272,7 @@ async function cleanupOldNews(daysToKeep = 30) {
 module.exports = {
   fetchNewsForCompany,
   aggregateAllNews,
-  storeNews,
+  storeNewsBatch,
   getNews,
   getAvailableCompanies,
   cleanupOldNews
