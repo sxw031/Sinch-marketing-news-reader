@@ -101,11 +101,11 @@ async function fetchNewsForCompany(company) {
 async function aggregateAllNews(options = {}) {
   const isStrategicOnly = options.strategicOnly !== false;
   const { onProgress, onError } = options;
-  console.log(`Starting ${isStrategicOnly ? 'Strategic' : 'Full'} news aggregation...`);
+  console.log(`Starting ${isStrategicOnly ? 'Strategic' : 'Full'} news aggregation with TaskCoordinator (Concurrency: 5)...`);
   const startTime = new Date();
   
-  // Optimized for Render Free: 2 concurrent companies for better speed without crashing
-  const BATCH_SIZE = 2; 
+  // High-performance TaskCoordinator: 5 concurrent companies for "Sub-Minute" sync
+  const BATCH_SIZE = 5; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
@@ -127,7 +127,6 @@ async function aggregateAllNews(options = {}) {
 
           if (processedNews.length > 0) {
             await storeNews(processedNews, company.name);
-            console.log(`✓ [${company.name}] Stored ${processedNews.length} ${isStrategicOnly ? 'strategic ' : ''}articles`);
           }
         }
       } catch (error) {
@@ -136,24 +135,35 @@ async function aggregateAllNews(options = {}) {
       }
     }));
     
+    // Minimal delay between batches to maximize throughput
     if (i + BATCH_SIZE < COMPANIES.length) {
-      // Faster batch processing delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
   
   const duration = new Date() - startTime;
-  console.log(`\n✅ Aggregation completed in ${Math.round(duration/1000)}s`);
+  console.log(`\n✅ TaskCoordinator finished sync in ${Math.round(duration/1000)}s`);
 }
 
 async function storeNews(articles, company) {
   for (const article of articles) {
     try {
+      // Use URL as unique identifier to prevent duplicates more reliably
       const existing = await db_helpers.get(
-        'SELECT id FROM news WHERE title = ? AND company = ?',
-        [article.title, company]
+        'SELECT id, publishedAt FROM news WHERE url = ?',
+        [article.url]
       );
       
+      // Precise Source Date Parsing
+      let sourceDate = new Date();
+      if (article.publishedAt) {
+          const parsedDate = new Date(article.publishedAt);
+          if (!isNaN(parsedDate.getTime())) {
+              sourceDate = parsedDate;
+          }
+      }
+      const isoDate = sourceDate.toISOString().replace('Z', '');
+
       if (!existing) {
         await db_helpers.run(
           `INSERT INTO news (company, title, description, url, source, imageUrl, category, publishedAt, author) 
@@ -166,26 +176,21 @@ async function storeNews(articles, company) {
             article.source,
             article.imageUrl || '',
             article.category || 'General',
-            article.publishedAt ? new Date(article.publishedAt).toISOString().replace('Z', '') : new Date().toISOString().replace('Z', ''),
+            isoDate,
             article.author || 'Unknown'
           ]
         );
       } else {
-        // Update category if we have a better one
-        if (article.category && article.category !== 'General' && article.category !== 'news') {
-          await db_helpers.run(
-            'UPDATE news SET category = ? WHERE id = ? AND (category = "General" OR category = "news")',
-            [article.category, existing.id]
-          );
-        }
-        // Update source if we found a more specific one (e.g., LinkedIn or Official Website over generic Web Search)
-        const premiumSources = ['LinkedIn', 'Official Website'];
-        if (premiumSources.includes(article.source)) {
-          await db_helpers.run(
-            'UPDATE news SET source = ? WHERE id = ? AND source NOT IN (?, ?)',
-            [article.source, existing.id, ...premiumSources]
-          );
-        }
+        // Update existing entry with better data if found
+        await db_helpers.run(
+          'UPDATE news SET category = ?, source = ?, publishedAt = ? WHERE id = ?',
+          [
+              article.category || 'General',
+              article.source,
+              isoDate,
+              existing.id
+          ]
+        );
       }
     } catch (error) {
       if (!error.message.includes('UNIQUE constraint failed')) {

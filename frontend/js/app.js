@@ -524,9 +524,7 @@ async function triggerAggregation(isFull = false) {
     const btn = isFull ? document.getElementById('fetchAllBtn') : document.getElementById('refreshBtn');
     const originalText = btn ? btn.querySelector('span').textContent : '';
     
-    // Non-blocking: Update existing news immediately while syncing in background
-    loadNews(false, false);
-
+    // Non-blocking: Keep current view while syncing
     if (btn) {
         btn.disabled = true;
         btn.querySelector('i').classList.add('fa-spin');
@@ -606,10 +604,13 @@ async function loadNews(isExplicitRefresh = false, isSilent = false) {
             return;
         }
 
-        let url = `${API_BASE}?limit=1000`;
+        let url = `${API_BASE}?limit=2000`; // Increased limit for full historical view
         
+        // Precise Time Filtering: Always ensure we use the selected time range
         if (activeTimeRange) {
-            const isoDate = new Date(activeTimeRange).toISOString().replace('Z', '');
+            // Convert to local ISO string for backend comparison
+            const startDate = new Date(activeTimeRange);
+            const isoDate = startDate.toISOString().replace('Z', '');
             url += `&startDate=${encodeURIComponent(isoDate)}`;
         }
         
@@ -618,6 +619,7 @@ async function loadNews(isExplicitRefresh = false, isSilent = false) {
         if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
+        console.log('Fetching insights for range:', activeTimeRange);
         const response = await fetch(url);
         const data = await response.json();
         
