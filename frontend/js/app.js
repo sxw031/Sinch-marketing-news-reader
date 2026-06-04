@@ -625,27 +625,38 @@ function startStatusPolling(btn, originalText) {
                 const status = data.status;
                 const progress = Math.round((status.completedCompanies.length / status.totalCompanies) * 100);
                 
-                if (syncText) syncText.textContent = `Syncing: ${status.currentCompany || 'Initializing...'} (${progress}%)`;
+                // Enhanced feedback: count of companies
+                const count = status.completedCompanies.length;
+                const total = status.totalCompanies || 18;
+                
+                if (syncText) syncText.textContent = `Syncing: ${count}/${total} [${status.currentCompany || '...'}] (${progress}%)`;
                 if (syncProgress) syncProgress.style.width = `${progress}%`;
                 
-                // STREAMING UPDATE: Immediately show new news as they are fetched
+                // FORCE STREAMING: Load news every 2 seconds during sync
+                // We pass true for isSilent to avoid clearing the list/showing loaders
                 await loadNews(false, true);
             } else {
                 clearInterval(statusPollingInterval);
                 statusPollingInterval = null;
                 
-                if (syncBar) syncBar.style.display = 'none';
-                if (btn) {
-                    btn.disabled = false;
-                    btn.querySelector('i').classList.remove('fa-spin');
+                if (syncBar) {
+                    if (syncText) syncText.textContent = 'Sync complete! Finalizing...';
+                    setTimeout(() => {
+                        syncBar.style.display = 'none';
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.querySelector('i').classList.remove('fa-spin');
+                        }
+                    }, 1000);
                 }
-                // Final update: ensure we load with current filters and no spinner if silent
+                
+                // Final update: ensure we load with current filters
                 await loadNews(false, false); 
             }
         } catch (error) {
             console.error('Polling error:', error);
         }
-    }, 3000); // Poll every 3s to save resources on Render Free
+    }, 2000); // Higher frequency for better streaming feel
 }
 
 async function loadNews(isExplicitRefresh = false, isSilent = false) {
