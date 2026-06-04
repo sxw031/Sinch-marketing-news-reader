@@ -34,6 +34,7 @@ function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_publishedAt ON news(publishedAt)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_fetchedAt ON news(fetchedAt)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_category ON news(category)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_filter ON news(company, publishedAt, category)`);
   });
 }
 const db_helpers = {

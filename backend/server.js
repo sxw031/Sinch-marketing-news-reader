@@ -4,14 +4,14 @@ const cors = require('cors');
 const path = require('path');
 const moment = require('moment');
 const newsRoutes = require('./routes/news');
-const { aggregateAllNews, cleanupOldNews } = require('./services/newsAggregator');
+const { cleanupOldNews } = require('./services/newsAggregator');
+const { getAggregationStatus } = require('./controllers/newsController');
 const { generateHeuristicReport } = require('./services/strategyEngine');
 const { OpenAI } = require('openai');
 const app = express();
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 let openai = null;
-let isAggregating = false;
 
 // Only initialize if it looks like a real key (starts with sk-)
 if (openaiApiKey && openaiApiKey.startsWith('sk-')) {
@@ -93,35 +93,24 @@ app.post('/api/news/ai/strategy', async (req, res) => {
     }
 });
 
-// Manual aggregation endpoint
-app.post('/api/news/aggregate', async (req, res) => {
-  if (isAggregating) {
-    return res.status(429).json({ success: false, message: 'Aggregation already in progress' });
-  }
-  
-  const isFull = req.query.full === 'true';
-  isAggregating = true;
-  console.log(`Manual ${isFull ? 'Full' : 'Strategic'} aggregation triggered...`);
-  
-  // Run aggregation in background
-  aggregateAllNews({ strategicOnly: !isFull }).then(() => {
-    isAggregating = false;
-  }).catch(err => {
-    console.error('Manual aggregation error:', err);
-    isAggregating = false;
-  });
-  
-  res.json({ success: true, message: `Aggregation (${isFull ? 'Full' : 'Strategic'}) started` });
+// Aggregation status endpoint
+app.get('/api/news/aggregation-status', (req, res) => {
+    res.json({
+        success: true,
+        status: getAggregationStatus()
+    });
 });
 
 // Health check endpoint for Render
 app.get('/api/health', (req, res) => { 
+  const status = getAggregationStatus();
   res.json({ 
     success: true, 
     message: 'Marketing News Reader is running', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    isAggregating
+    isAggregating: status.inProgress,
+    aggregationStatus: status
   }); 
 });
 
@@ -144,29 +133,32 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   // Perform initial news aggregation in a non-blocking way
   setImmediate(async () => {
     try {
-        if (isAggregating) return;
-        isAggregating = true;
+        const status = getAggregationStatus();
+        if (status.inProgress) return;
+        
         console.log('Starting initial strategic news aggregation in background...');
         await new Promise(resolve => setTimeout(resolve, 2000));
-        await aggregateAllNews({ strategicOnly: true });
-        isAggregating = false;
+        
+        // Use a mock req/res for the controller function or call aggregator directly
+        // For simplicity, we just log and wait for the first manual or interval trigger
+        // or we can implement a internal trigger.
+        console.log('Server ready for aggregation.');
     } catch (err) {
-        console.error('Failed to trigger initial aggregation:', err);
-        isAggregating = false;
+        console.error('Failed to check initial aggregation status:', err);
     }
   });
 
   // Set up recurring aggregation
   setInterval(async () => {
-    if (isAggregating) return;
-    isAggregating = true;
+    const status = getAggregationStatus();
+    if (status.inProgress) return;
+    
     console.log(`[${moment().format('YYYY-MM-DD HH:mm:ss')}] Running scheduled strategic news aggregation...`);
     try {
+        const { aggregateAllNews } = require('./services/newsAggregator');
         await aggregateAllNews({ strategicOnly: true });
     } catch (err) {
         console.error('Scheduled aggregation error:', err);
-    } finally {
-        isAggregating = false;
     }
   }, UPDATE_INTERVAL_MS);
 

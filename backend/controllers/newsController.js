@@ -50,6 +50,19 @@ function getCompanies(req, res) {
   }
 }
 let isAggregating = false;
+let aggregationStatus = {
+    inProgress: false,
+    currentCompany: null,
+    completedCompanies: [],
+    totalCompanies: 0,
+    startTime: null,
+    errors: 0,
+    isFull: false
+};
+
+function getAggregationStatus() {
+    return aggregationStatus;
+}
 
 async function triggerAggregation(req, res) {
   try {
@@ -57,22 +70,50 @@ async function triggerAggregation(req, res) {
       return res.json({ success: true, message: 'Aggregation is already in progress' });
     }
 
+    const isFull = req.query.full === 'true';
+    const { COMPANIES } = require('../config/sources');
+    
     isAggregating = true;
+    aggregationStatus = {
+        inProgress: true,
+        currentCompany: null,
+        completedCompanies: [],
+        totalCompanies: COMPANIES.length,
+        startTime: new Date(),
+        errors: 0,
+        isFull: isFull
+    };
+
     res.json({ success: true, message: 'News aggregation started in background' });
     
     // Run in background
     (async () => {
       try {
-        await aggregateAllNews();
+        await aggregateAllNews({
+            strategicOnly: !isFull,
+            onProgress: (companyName) => {
+                aggregationStatus.currentCompany = companyName;
+                if (!aggregationStatus.completedCompanies.includes(companyName)) {
+                    aggregationStatus.completedCompanies.push(companyName);
+                }
+            },
+            onError: (companyName, error) => {
+                aggregationStatus.errors++;
+                console.error(`Error aggregating ${companyName}:`, error);
+            }
+        });
       } catch (error) {
         console.error('Error in background aggregation:', error);
       } finally {
         isAggregating = false;
+        aggregationStatus.inProgress = false;
+        aggregationStatus.currentCompany = 'Completed';
       }
     })();
   } catch (error) {
     console.error('Error triggering aggregation:', error);
     isAggregating = false;
+    aggregationStatus.inProgress = false;
     res.status(500).json({ success: false, error: error.message });
   }
 }
@@ -87,4 +128,4 @@ async function getSources(req, res) {
   }
 }
 
-module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources };
+module.exports = { getAllNews, getCompanyNews, getCompanies, triggerAggregation, getSources, getAggregationStatus };

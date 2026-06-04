@@ -55,14 +55,12 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
     let queries = [];
     if (site === 'linkedin.com') {
       queries = [
-        `site:linkedin.com/company "${company}" "posts"`,
-        `site:linkedin.com/posts "${company}"`,
-        `"${company}" LinkedIn latest updates`
+        `site:linkedin.com/company "${company}"`,
+        `"${company}" LinkedIn news`
       ];
     } else if (site) {
       queries = [
-        `site:${site} "${company}"`,
-        `"${company}" ${site} latest news`
+        `site:${site} "${company}"`
       ];
     } else {
       queries = [`"${company}" latest news`];
@@ -71,13 +69,16 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
     let articles = [];
     
     for (const query of queries) {
+      // Add a small jitter delay to avoid being blocked
+      await sleep(1000 + Math.random() * 1000);
+      
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       try {
         const response = await fetchWithRetry(url);
         const $ = cheerio.load(response.data);
         
         $('.result').each((index, element) => {
-          if (articles.length >= (options.limit || 5)) return false;
+          if (articles.length >= (options.limit || 8)) return false;
 
           const $el = $(element);
           const titleEl = $el.find('.result__a');
@@ -89,7 +90,7 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
 
           if (!title || !link) return;
 
-          if (link.startsWith('//')) link = 'https:' + link;
+          // DuckDuckGo redirect handling
           if (link.includes('uddg=')) {
             try {
               const urlParts = link.split('uddg=');
@@ -98,15 +99,13 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
               }
             } catch (e) {}
           }
+          if (link.startsWith('//')) link = 'https:' + link;
 
           const isTargetSite = !site || link.toLowerCase().includes(site.toLowerCase());
 
           if (title && link && !link.includes('duckduckgo.com') && isTargetSite) {
             if (!articles.some(a => a.url === link)) {
-              // Extract a better source name if it's general web search
               let finalSource = sourceName;
-              
-              // Force "LinkedIn" source name for any linkedin.com results
               if (link.toLowerCase().includes('linkedin.com')) {
                 finalSource = 'LinkedIn';
               } else if (sourceName === 'Web Search') {
@@ -135,7 +134,7 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
         console.error(`DuckDuckGo query failed for ${query}:`, e.message);
       }
 
-      if (articles.length > 0) break;
+      if (articles.length >= 3) break; // If we found some, move on to be faster
     }
 
     return articles;

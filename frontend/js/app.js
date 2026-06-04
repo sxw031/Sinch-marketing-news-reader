@@ -483,6 +483,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+let statusPollingInterval = null;
+
 async function triggerAggregation(isFull = false) {
     const btn = isFull ? document.getElementById('fetchAllBtn') : document.getElementById('refreshBtn');
     const originalText = btn ? btn.querySelector('span').textContent : '';
@@ -497,22 +499,109 @@ async function triggerAggregation(isFull = false) {
         const data = await response.json();
         
         if (data.success) {
-            // Periodically refresh news list
-            let refreshCount = 0;
-            const interval = setInterval(async () => {
-                await loadNews();
-                refreshCount++;
-                if (refreshCount >= 12) clearInterval(interval);
-            }, 5000);
+            startStatusPolling(btn, originalText);
         } else {
             alert('Failed to start aggregation: ' + data.message);
+            if (btn) {
+                btn.disabled = false;
+                btn.querySelector('span').textContent = originalText;
+            }
         }
     } catch (error) {
         console.error('Error triggering aggregation:', error);
-    } finally {
         if (btn) {
             btn.disabled = false;
             btn.querySelector('span').textContent = originalText;
         }
+    }
+}
+
+function startStatusPolling(btn, originalText) {
+    if (statusPollingInterval) clearInterval(statusPollingInterval);
+    
+    const loadingOverlay = document.getElementById('loadingSpinner');
+    const statusText = document.createElement('p');
+    statusText.id = 'pollingStatus';
+    statusText.style.textAlign = 'center';
+    statusText.style.marginTop = '10px';
+    statusText.style.fontWeight = 'bold';
+    statusText.style.color = 'var(--primary)';
+    
+    if (loadingOverlay) {
+        const existingStatus = document.getElementById('pollingStatus');
+        if (existingStatus) existingStatus.remove();
+        loadingOverlay.appendChild(statusText);
+    }
+    
+    showLoading(true);
+    
+    statusPollingInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/aggregation-status`);
+            const data = await response.json();
+            
+            if (data.success && data.status.inProgress) {
+                const status = data.status;
+                const progress = Math.round((status.completedCompanies.length / status.totalCompanies) * 100);
+                statusText.textContent = `Scraping: ${status.currentCompany || 'Starting...'} (${progress}%)`;
+                
+                // Real-time update: load news every time a company is completed
+                if (status.completedCompanies.length > 0) {
+                    await loadNews(false, true); // silent load
+                }
+            } else {
+                clearInterval(statusPollingInterval);
+                statusPollingInterval = null;
+                if (statusText) statusText.remove();
+                showLoading(false);
+                
+                if (btn) {
+                    btn.disabled = false;
+                    btn.querySelector('span').textContent = originalText;
+                }
+                await loadNews(); // Final load
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 2000);
+}
+
+async function loadNews(isExplicitRefresh = false, isSilent = false) {
+    if (!isSilent) showLoading(true);
+    try {
+        const category = document.getElementById('categoryFilter').value;
+        const source = document.getElementById('sourceFilter').value;
+        const search = document.getElementById('searchInput').value;
+        
+        if (isExplicitRefresh) {
+            await triggerAggregation(false);
+            return;
+        }
+
+        let url = `${API_BASE}?limit=1000`;
+        
+        if (activeTimeRange) {
+            const isoDate = new Date(activeTimeRange).toISOString().replace('Z', '');
+            url += `&startDate=${encodeURIComponent(isoDate)}`;
+        }
+        
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+        if (source) url += `&source=${encodeURIComponent(source)}`;
+        if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            allNews = data.data || [];
+            renderNews();
+        }
+    } catch (error) {
+        console.error('Error loading news:', error);
+        if (!isSilent) showEmptyState(true);
+    } finally {
+        if (!isSilent) showLoading(false);
     }
 }

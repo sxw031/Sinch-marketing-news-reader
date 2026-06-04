@@ -100,15 +100,19 @@ async function fetchNewsForCompany(company) {
 
 async function aggregateAllNews(options = {}) {
   const isStrategicOnly = options.strategicOnly !== false;
+  const { onProgress, onError } = options;
   console.log(`Starting ${isStrategicOnly ? 'Strategic' : 'Full'} news aggregation...`);
   const startTime = new Date();
   
-  const BATCH_SIZE = 2; 
+  // For Render Free Tier, we use smaller batch or sequential to avoid OOM
+  const BATCH_SIZE = 1; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
     await Promise.all(batch.map(async (company) => {
       try {
+        if (onProgress) onProgress(company.name);
+        
         const news = await fetchNewsForCompany(company.name);
         if (news.length > 0) {
           let processedNews = news.map(article => ({
@@ -128,11 +132,13 @@ async function aggregateAllNews(options = {}) {
         }
       } catch (error) {
         console.error(`❌ [${company.name}] Aggregation failed:`, error.message);
+        if (onError) onError(company.name, error.message);
       }
     }));
     
     if (i + BATCH_SIZE < COMPANIES.length) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Shorter delay for better responsiveness, but still being polite
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   
