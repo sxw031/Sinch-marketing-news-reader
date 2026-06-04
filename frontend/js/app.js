@@ -29,9 +29,7 @@ const companyDomains = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Initializing MarketFeed Optimized...');
-    
-    setupDateConstraints();
+    console.log('Initializing MarketFeed Strategic Insights...');
     
     const saved = localStorage.getItem(SELECTED_COMPANIES_KEY);
     if (saved) {
@@ -46,21 +44,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Theme initialization
     if (localStorage.getItem('theme') === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        document.getElementById('themeToggle').textContent = '☀️';
+        const icon = document.querySelector('#themeToggle i');
+        if (icon) icon.className = 'fas fa-sun';
     }
 });
-
-function setupDateConstraints() {
-    const today = new Date().toISOString().split('T')[0];
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    
-    startDateInput.min = '2020-01-01';
-    startDateInput.max = today;
-    endDateInput.min = '2020-01-01';
-    endDateInput.max = today;
-    endDateInput.value = today;
-}
 
 async function loadCompanies() {
     try {
@@ -69,50 +56,32 @@ async function loadCompanies() {
         if (data.success) {
             availableCompanies = data.data;
             renderCompanyGrid();
-            updateStats();
         }
     } catch (error) {
         console.error('Error loading companies:', error);
     }
 }
 
-/**
- * Enhanced Logo Fetching Logic
- * 1. Primary: Clearbit (High quality)
- * 2. Secondary: Google Favicon (Very fast & reliable)
- * 3. Fallback: UI Avatars (Instant, never fails)
- */
 function getLogoUrl(companyName, type = 'primary') {
     const domain = companyDomains[companyName];
-    
-    if (type === 'primary' && domain) {
-        return `https://logo.clearbit.com/${domain}?size=128`;
-    }
-    
-    if (type === 'secondary' && domain) {
-        return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-    }
-    
-    // Final fallback: UI Avatars
+    if (type === 'primary' && domain) return `https://logo.clearbit.com/${domain}?size=128`;
+    if (type === 'secondary' && domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
 }
 
-// Global function for img onerror to handle fallbacks
 window.handleLogoError = function(img, companyName) {
     const currentSrc = img.src;
     const domain = companyDomains[companyName];
-    
     if (currentSrc.includes('clearbit.com') && domain) {
-        // Switch to Google Favicon
         img.src = getLogoUrl(companyName, 'secondary');
     } else if (!currentSrc.includes('ui-avatars.com')) {
-        // Switch to UI Avatars
         img.src = getLogoUrl(companyName, 'fallback');
     }
 };
 
 function renderCompanyGrid() {
     const container = document.getElementById('companyFilters');
+    if (!container) return;
     container.innerHTML = '';
     
     availableCompanies.forEach(company => {
@@ -122,10 +91,7 @@ function renderCompanyGrid() {
         item.dataset.company = company.name;
         
         item.innerHTML = `
-            <img src="${getLogoUrl(company.name)}" 
-                 alt="${company.name}" 
-                 loading="lazy"
-                 onerror="handleLogoError(this, '${company.name}')">
+            <img src="${getLogoUrl(company.name)}" alt="${company.name}" loading="lazy" onerror="handleLogoError(this, '${company.name}')">
             <span>${company.name}</span>
         `;
         
@@ -142,121 +108,50 @@ function renderCompanyGrid() {
 function updateSelectionLabel() {
     const count = selectedCompanies.length;
     const label = document.getElementById('selectedCountLabel');
-    if (count === 0) {
-        label.textContent = 'Select Companies';
-    } else if (count === availableCompanies.length) {
-        label.textContent = 'All Companies Selected';
-    } else {
-        label.textContent = `${count} Selected`;
-    }
+    if (count === 0) label.textContent = 'Select Companies';
+    else if (count === availableCompanies.length) label.textContent = 'All Companies';
+    else label.textContent = `${count} Companies`;
 }
 
 async function loadNews(isExplicitRefresh = false) {
     showLoading(true);
     try {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
         const category = document.getElementById('categoryFilter').value;
         const source = document.getElementById('sourceFilter').value;
         const search = document.getElementById('searchInput').value;
         
-        // If it's an explicit refresh, we trigger the background aggregation first
         if (isExplicitRefresh) {
-            console.log('Triggering contextual background aggregation...');
-            // We can pass current filters to the backend to optimize the crawl (future enhancement)
             await fetch(`${API_BASE}/aggregate`, { method: 'POST' });
-            // Wait a bit for the background process to start finding things
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 1500));
         }
 
         let url = `${API_BASE}?limit=1000`;
-        
-        // Default View: If no filters are set, only show news from today
-        if (!start && !end && !category && !source && !search && selectedCompanies.length === 0) {
-            const today = new Date().toISOString().split('T')[0];
-            url += `&startDate=${today}`;
-        } else {
-            if (start) url += `&startDate=${start}`;
-            if (end) url += `&endDate=${end}`;
-            if (category) url += `&category=${category}`;
-            if (source) url += `&source=${encodeURIComponent(source)}`;
-            if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
-            if (search) url += `&search=${encodeURIComponent(search)}`;
-        }
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+        if (source) url += `&source=${encodeURIComponent(source)}`;
+        if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
 
         const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
             allNews = data.data || [];
-            renderNews(true);
-            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+            renderNews();
         }
     } catch (error) {
         console.error('Error loading news:', error);
-        showError('Failed to load news.');
+        showEmptyState(true);
     } finally {
         showLoading(false);
     }
 }
 
-function renderNews(isExplicitApply = false) {
+function renderNews() {
     const newsList = document.getElementById('newsList');
-    const emptyState = document.getElementById('emptyState');
-    
-    let filteredNews = allNews;
-
-    // Company Filter
-    if (selectedCompanies.length > 0) {
-        filteredNews = filteredNews.filter(news => selectedCompanies.includes(news.company));
-    }
-
-    // Date Filter
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
-    if (start) filteredNews = filteredNews.filter(n => new Date(n.publishedAt) >= new Date(start));
-    if (end) {
-        const endDateObj = new Date(end);
-        endDateObj.setHours(23, 59, 59, 999);
-        filteredNews = filteredNews.filter(n => new Date(n.publishedAt) <= endDateObj);
-    }
-
-    // Category Filter
-    const selectedCategory = document.getElementById('categoryFilter').value;
-    if (selectedCategory) {
-        filteredNews = filteredNews.filter(n => n.category === selectedCategory);
-    }
-
-    // Source Filter
-    const selectedSource = document.getElementById('sourceFilter').value;
-    if (selectedSource) {
-        filteredNews = filteredNews.filter(n => n.source === selectedSource);
-    }
-
-    // Search Filter
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    if (search) {
-        filteredNews = filteredNews.filter(n => 
-            n.title.toLowerCase().includes(search) || 
-            (n.description && n.description.toLowerCase().includes(search))
-        );
-    }
-
-    // Sorting: Newest first
-    filteredNews.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-
-    // If too many news (e.g. > 100) and not searching, prioritize Strategic Insights
-    if (filteredNews.length > 100 && !search && !selectedCategory && isExplicitApply) {
-        const strategic = filteredNews.filter(n => n.category === 'Strategic Insights');
-        const others = filteredNews.filter(n => n.category !== 'Strategic Insights');
-        // Show all strategic first, then others
-        filteredNews = [...strategic, ...others];
-    }
-
-    if (filteredNews.length === 0) {
+    if (allNews.length === 0) {
         showEmptyState(true);
     } else {
         showEmptyState(false);
-        newsList.innerHTML = filteredNews.map(article => createNewsCard(article)).join('');
+        newsList.innerHTML = allNews.map(article => createNewsCard(article)).join('');
         
         document.querySelectorAll('.news-card').forEach(card => {
             card.addEventListener('click', () => {
@@ -264,9 +159,7 @@ function renderNews(isExplicitApply = false) {
             });
         });
     }
-    
-    updateStats(filteredNews.length);
-    updateSelectionLabel();
+    updateStats(allNews.length);
 }
 
 function createNewsCard(article) {
@@ -278,15 +171,11 @@ function createNewsCard(article) {
     return `
         <div class="news-card ${isStrategic ? 'strategic' : ''}" data-article='${JSON.stringify(article).replace(/'/g, "&apos;")}'>
             <div class="news-card-image-container">
-                <img src="${logoUrl}" 
-                     alt="${article.company}" 
-                     class="news-card-logo" 
-                     loading="lazy"
-                     onerror="handleLogoError(this, '${article.company}')">
+                <img src="${logoUrl}" alt="${article.company}" class="news-card-logo" loading="lazy" onerror="handleLogoError(this, '${article.company}')">
             </div>
             <div class="news-card-content">
                 <h3 class="news-card-title">${escapeHtml(article.title)}</h3>
-                <p class="news-card-description">${escapeHtml(article.description || 'No description available')}</p>
+                <p class="news-card-description">${escapeHtml(article.description || 'No summary available')}</p>
                 <div class="news-card-meta">
                     <span class="badge badge-company">${article.company}</span>
                     <span class="badge badge-source">${article.source}</span>
@@ -304,22 +193,18 @@ function showArticleModal(article) {
     const logoUrl = getLogoUrl(article.company);
     
     modalBody.innerHTML = `
-        <div style="text-align: center; margin-bottom: 1.5rem; background: #ffffff; padding: 2rem; border-radius: 16px; border: 1px solid var(--border);">
-            <img src="${logoUrl}" 
-                 alt="${article.company}" 
-                 style="max-width: 160px; height: 80px; object-fit: contain;"
-                 onerror="handleLogoError(this, '${article.company}')">
+        <div style="text-align: center; margin-bottom: 2rem; background: #f8fafc; padding: 2.5rem; border-radius: 20px; border: 1px solid var(--border);">
+            <img src="${logoUrl}" alt="${article.company}" style="max-width: 180px; height: 90px; object-fit: contain;" onerror="handleLogoError(this, '${article.company}')">
         </div>
-        <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">${escapeHtml(article.title)}</h2>
-        <div class="news-card-meta" style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.6rem; margin-bottom: 1.5rem; font-weight: 800; line-height: 1.3;">${escapeHtml(article.title)}</h2>
+        <div class="news-card-meta" style="margin-bottom: 2rem;">
             <span class="badge badge-company">${article.company}</span>
             <span class="badge badge-source">${article.source}</span>
+            <span class="badge badge-category">${article.category}</span>
             <span class="news-card-date">${formatDate(article.publishedAt)}</span>
         </div>
-        <p style="font-size: 1rem; line-height: 1.6; color: var(--text-main);">${escapeHtml(article.description || 'No description available')}</p>
-        <div style="margin-top: 2rem;">
-            <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="text-decoration: none; display: block; text-align: center;">Read Full Article →</a>
-        </div>
+        <div style="font-size: 1.05rem; line-height: 1.7; color: var(--text-main); margin-bottom: 2.5rem;">${escapeHtml(article.description || 'No description available')}</div>
+        <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn-icon-text btn-refresh" style="text-decoration: none; justify-content: center; padding: 1rem;">View Original Source <i class="fas fa-external-link-alt"></i></a>
     `;
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
@@ -328,15 +213,9 @@ function showArticleModal(article) {
 function setupEventListeners() {
     const selectorModal = document.getElementById('companySelectorModal');
     const articleModal = document.getElementById('articleModal');
+    const reportModal = document.getElementById('reportModal');
 
     document.getElementById('openCompanySelector').addEventListener('click', () => {
-        document.querySelectorAll('.company-item').forEach(item => {
-            if (selectedCompanies.includes(item.dataset.company)) {
-                item.classList.add('selected');
-            } else {
-                item.classList.remove('selected');
-            }
-        });
         selectorModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
     });
@@ -347,12 +226,12 @@ function setupEventListeners() {
     });
 
     document.getElementById('applySelectorBtn').addEventListener('click', () => {
-        const selected = Array.from(document.querySelectorAll('.company-item.selected')).map(item => item.dataset.company);
-        selectedCompanies = selected;
+        selectedCompanies = Array.from(document.querySelectorAll('.company-item.selected')).map(item => item.dataset.company);
         localStorage.setItem(SELECTED_COMPANIES_KEY, JSON.stringify(selectedCompanies));
         selectorModal.style.display = 'none';
         document.body.style.overflow = '';
-        renderNews();
+        updateSelectionLabel();
+        loadNews();
     });
 
     document.getElementById('selectAllBtn').addEventListener('click', () => {
@@ -364,21 +243,16 @@ function setupEventListeners() {
     });
 
     document.getElementById('refreshBtn').addEventListener('click', () => loadNews(true));
-    document.getElementById('searchInput').addEventListener('input', renderNews);
-    
-    // Explicit Apply Filters for Dates and Category
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
+    document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(); });
 
-    // Quick Time Filters
     document.querySelectorAll('.btn-quick-time').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
             const range = btn.dataset.range;
             const now = new Date();
             let start = new Date();
-
             switch(range) {
                 case '3h': start.setHours(now.getHours() - 3); break;
                 case '24h': start.setHours(now.getHours() - 24); break;
@@ -387,68 +261,57 @@ function setupEventListeners() {
                 case '1m': start.setMonth(now.getMonth() - 1); break;
                 case '3m': start.setMonth(now.getMonth() - 3); break;
             }
-
-            document.getElementById('startDate').value = start.toISOString().split('T')[0];
-            document.getElementById('endDate').value = now.toISOString().split('T')[0];
-            loadNews();
+            // Use a temporary filter approach for quick time
+            allNews = allNews.filter(n => new Date(n.publishedAt) >= start);
+            renderNews();
         });
     });
 
     document.getElementById('resetBtn').addEventListener('click', () => {
-        document.getElementById('startDate').value = '';
-        document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('categoryFilter').value = '';
         document.getElementById('sourceFilter').value = '';
         document.getElementById('searchInput').value = '';
         document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
         selectedCompanies = [];
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
-        loadNews(); // Re-fetch default view from server
         renderCompanyGrid();
+        loadNews();
     });
 
-    // AI Chat Interaction
+    // AI Chat
     const aiChatToggle = document.getElementById('aiChatToggle');
     const aiChatWindow = document.getElementById('aiChatWindow');
-    const closeAiChat = document.getElementById('closeAiChat');
     const aiChatInput = document.getElementById('aiChatInput');
-    const sendAiMessage = document.getElementById('sendAiMessage');
     const aiChatMessages = document.getElementById('aiChatMessages');
 
     aiChatToggle.addEventListener('click', () => {
         aiChatWindow.style.display = aiChatWindow.style.display === 'none' ? 'flex' : 'none';
     });
 
-    closeAiChat.addEventListener('click', () => {
+    document.getElementById('closeAiChat').addEventListener('click', () => {
         aiChatWindow.style.display = 'none';
     });
 
     async function handleAiChat() {
         const query = aiChatInput.value.trim();
         if (!query) return;
-
-        // Add user message
         appendAiMessage('user', query);
         aiChatInput.value = '';
-
-        // Show typing indicator
-        const botMsgDiv = appendAiMessage('bot', 'Thinking...');
-
+        const botMsgDiv = appendAiMessage('bot', 'Analyzing news...');
         try {
-            const response = await fetch(`${API_BASE}/ai/chat`, {
+            const response = await fetch('/api/news/ai/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, context: allNews.slice(0, 20) }) // Send top news as context
+                body: JSON.stringify({ query, context: allNews.slice(0, 15) })
             });
             const data = await response.json();
-            botMsgDiv.textContent = data.answer || "I'm sorry, I couldn't process that.";
+            botMsgDiv.textContent = data.answer || "I couldn't find a specific answer for that.";
         } catch (error) {
-            botMsgDiv.textContent = "Error connecting to AI assistant.";
+            botMsgDiv.textContent = "Connection error.";
         }
-        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
     }
 
-    sendAiMessage.addEventListener('click', handleAiChat);
+    document.getElementById('sendAiMessage').addEventListener('click', handleAiChat);
     aiChatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleAiChat(); });
 
     function appendAiMessage(role, text) {
@@ -460,45 +323,40 @@ function setupEventListeners() {
         return msgDiv;
     }
 
-    // Strategy Report Generation
-    const generateReportBtn = document.getElementById('generateReportBtn');
-    const reportModal = document.getElementById('reportModal');
-    const closeReportModal = document.getElementById('closeReportModal');
-    const reportContent = document.getElementById('reportContent');
-
-    generateReportBtn.addEventListener('click', async () => {
+    // Strategy Report
+    document.getElementById('generateReportBtn').addEventListener('click', async () => {
         reportModal.style.display = 'block';
-        reportContent.innerHTML = '<div class="report-loading"><div class="spinner"></div><p>AI is analyzing CSM Strategic Insights and crafting your strategy...</p></div>';
-        
+        const reportContent = document.getElementById('reportContent');
+        reportContent.innerHTML = '<div class="report-loading"><div class="spinner"></div><p>Crafting your strategic analysis...</p></div>';
         try {
             const strategicNews = allNews.filter(n => n.category === 'Strategic Insights');
-            const response = await fetch(`${API_BASE}/ai/strategy`, {
+            const response = await fetch('/api/news/ai/strategy', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ news: strategicNews })
+                body: JSON.stringify({ news: strategicNews.slice(0, 20) })
             });
             const data = await response.json();
             if (data.success) {
-                reportContent.innerHTML = `<div class="report-text">${data.report.replace(/\n/g, '<br>')}</div>`;
+                reportContent.innerHTML = `<div style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.8;">${data.report}</div>`;
             } else {
-                reportContent.innerHTML = '<p>Failed to generate report. Please try again.</p>';
+                reportContent.innerHTML = '<p>Failed to generate strategy. Please try again.</p>';
             }
         } catch (error) {
-            reportContent.innerHTML = '<p>Error connecting to strategy engine.</p>';
+            reportContent.innerHTML = '<p>AI Strategy Engine is currently busy.</p>';
         }
     });
 
-    closeReportModal.addEventListener('click', () => {
+    document.getElementById('closeReportModal').addEventListener('click', () => {
         reportModal.style.display = 'none';
     });
 
     document.getElementById('downloadReportBtn').addEventListener('click', () => {
-        const content = reportContent.innerText;
+        const content = document.getElementById('reportContent').innerText;
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Sinch_Strategy_Report_${new Date().toISOString().split('T')[0]}.txt`;
+        a.download = `MarketFeed_Strategy_${new Date().toISOString().split('T')[0]}.txt`;
         a.click();
     });
 
@@ -508,9 +366,7 @@ function setupEventListeners() {
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
         const icon = document.querySelector('#themeToggle i');
-        if (icon) {
-            icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-        }
+        if (icon) icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
     });
 
     document.getElementById('closeModal').addEventListener('click', () => {
@@ -519,23 +375,38 @@ function setupEventListeners() {
     });
 
     window.addEventListener('click', (e) => {
-        if (e.target === selectorModal) {
+        if (e.target === selectorModal || e.target === articleModal || e.target === reportModal) {
             selectorModal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-        if (e.target === articleModal) {
             articleModal.style.display = 'none';
+            reportModal.style.display = 'none';
             document.body.style.overflow = '';
         }
     });
 }
 
-function updateStats(filteredCount) {
-    document.getElementById('totalArticles').textContent = filteredCount !== undefined ? filteredCount : allNews.length;
-    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function showLoading(show) {
+    document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+    document.getElementById('newsList').style.opacity = show ? '0.4' : '1';
+}
+
+function showEmptyState(isEmpty) {
+    const emptyState = document.getElementById('emptyState');
+    const newsList = document.getElementById('newsList');
+    if (isEmpty) {
+        newsList.innerHTML = '';
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+    }
+}
+
+function updateStats(count) {
+    const totalArticles = document.getElementById('totalArticles');
+    if (totalArticles) totalArticles.textContent = count || '0';
 }
 
 function formatDate(dateString) {
+    if (!dateString) return 'Recent';
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
@@ -545,33 +416,8 @@ function formatDate(dateString) {
 }
 
 function escapeHtml(text) {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-    return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
-}
-
-function showLoading(show) {
-    document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
-    document.getElementById('newsList').style.opacity = show ? '0.5' : '1';
-}
-
-function showError(message) {
-    const emptyState = document.getElementById('emptyState');
-    emptyState.querySelector('p').textContent = message;
-    emptyState.style.display = 'block';
-}
-
-function showEmptyState(isEmpty) {
-    const emptyState = document.getElementById('emptyState');
-    const newsList = document.getElementById('newsList');
-    if (isEmpty) {
-        newsList.innerHTML = '';
-        emptyState.style.display = 'block';
-        // If it's the very first load, give a more helpful message
-        if (allNews.length === 0) {
-            emptyState.querySelector('h3').textContent = "Initializing Feed...";
-            emptyState.querySelector('p').innerHTML = "We're currently aggregating the latest news for your selected companies. <br>This usually takes a few minutes on first launch. <br><br><button onclick='location.reload()' class='btn-outline' style='margin: 0 auto;'>Check Again</button>";
-        }
-    } else {
-        emptyState.style.display = 'none';
-    }
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

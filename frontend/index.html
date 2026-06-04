@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarketFeed | Dashboard</title>
+    <title>MarketFeed | Strategic Insights</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -16,26 +16,28 @@
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-left">
-                    <span class="logo">🚀 MarketFeed</span>
+                    <span class="logo"><i class="fas fa-bolt"></i> MarketFeed</span>
                 </div>
                 
                 <div class="nav-center">
                     <button class="selector-trigger" id="openCompanySelector">
+                        <i class="fas fa-building"></i>
                         <span id="selectedCountLabel">Select Companies</span>
-                        <span class="chevron">▾</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.7rem; opacity: 0.5;"></i>
                     </button>
                 </div>
 
                 <div class="nav-right">
                     <div class="search-bar">
-                        <input type="text" id="searchInput" placeholder="Search news...">
+                        <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
+                        <input type="text" id="searchInput" placeholder="Search insights..." style="padding-left: 2.5rem;">
                     </div>
-                    <button id="themeToggle" class="btn-theme" title="Toggle dark mode">
+                    <button id="themeToggle" class="btn-theme" title="Toggle theme">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button id="refreshBtn" class="btn-refresh-main">
+                    <button id="refreshBtn" class="btn-icon-text btn-refresh">
                         <i class="fas fa-sync-alt"></i>
-                        <span class="refresh-text">Refresh Feed</span>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -55,17 +57,7 @@
                 
                 <div class="filter-row">
                     <div class="filter-group">
-                        <div class="date-filters">
-                            <div class="date-input-group">
-                                <span class="filter-label">From</span>
-                                <input type="date" id="startDate" class="date-input">
-                            </div>
-                            <div class="date-input-group">
-                                <span class="filter-label">To</span>
-                                <input type="date" id="endDate" class="date-input">
-                            </div>
-                        </div>
-                        <div class="category-filter-group">
+                        <div class="filter-item">
                             <span class="filter-label">Category</span>
                             <select id="categoryFilter" class="filter-select">
                                 <option value="">All Categories</option>
@@ -76,30 +68,23 @@
                                 <option value="General">General</option>
                             </select>
                         </div>
-                        <div class="source-filter-group">
+                        <div class="filter-item">
                             <span class="filter-label">Source</span>
                             <select id="sourceFilter" class="filter-select">
                                 <option value="">All Sources</option>
                                 <option value="Official Website">Official Website</option>
                                 <option value="LinkedIn">LinkedIn</option>
-                                <option value="New York Times">New York Times</option>
-                                <option value="Wall Street Journal">Wall Street Journal</option>
-                                <option value="Bloomberg">Bloomberg</option>
-                                <option value="DW">DW</option>
-                                <option value="TechCrunch">TechCrunch</option>
+                                <option value="Web Search">Web Search</option>
                             </select>
                         </div>
-                        <button id="applyFiltersBtn" class="btn-primary">Apply</button>
+                        <button id="applyFiltersBtn" class="btn-icon-text btn-apply">Apply Filters</button>
                     </div>
 
                     <div class="filter-actions">
-                        <div class="quick-stats" id="stats">
-                            <span class="stat-item"><strong id="totalArticles">-</strong> Articles</span>
-                        </div>
-                        <button id="generateReportBtn" class="btn-special">
-                            <i class="fas fa-magic"></i> Generate Strategy
+                        <button id="generateReportBtn" class="btn-icon-text btn-strategy">
+                            <i class="fas fa-wand-magic-sparkles"></i> Generate Strategy
                         </button>
-                        <button id="resetBtn" class="btn-outline">
+                        <button id="resetBtn" class="btn-icon-text btn-reset">
                             <i class="fas fa-undo"></i> Reset
                         </button>
                     </div>
@@ -110,42 +95,38 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="nav-container">
-                <div class="news-container">
-                    <div id="newsList" class="news-list"></div>
-                    
-                    <!-- Loading State -->
-                    <div id="loadingSpinner" class="loading" style="display: none;">
-                        <div class="spinner"></div>
-                        <p>Aggregating latest updates...</p>
-                    </div>
+                <div id="newsList" class="news-list"></div>
+                
+                <!-- Loading State -->
+                <div id="loadingSpinner" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Aggregating strategic insights...</p>
+                </div>
 
-                    <!-- Empty State -->
-                    <div id="emptyState" class="empty-state" style="display: none;">
-                        <div class="empty-icon">📭</div>
-                        <h3>No News Found</h3>
-                        <p>Try adjusting your company selection or date range.</p>
-                    </div>
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-icon" style="font-size: 4rem; margin-bottom: 1.5rem;">📡</div>
+                    <h3>Initializing Feed...</h3>
+                    <p>We're currently aggregating the latest news for your selected companies.</p>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Company Selector Modal (Grid Layout) -->
+    <!-- Company Selector Modal -->
     <div id="companySelectorModal" class="modal">
-        <div class="modal-content selector-modal">
+        <div class="modal-content">
             <div class="modal-header">
                 <h2>Select Companies</h2>
                 <span class="close" id="closeSelector">&times;</span>
             </div>
-            <div class="selector-actions">
-                <button id="selectAllBtn" class="btn-outline">Select All</button>
-                <button id="deselectAllBtn" class="btn-outline">Deselect All</button>
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <button id="selectAllBtn" class="btn-icon-text btn-reset" style="flex: 1; justify-content: center;">Select All</button>
+                <button id="deselectAllBtn" class="btn-icon-text btn-reset" style="flex: 1; justify-content: center;">Deselect All</button>
             </div>
-            <div class="company-grid" id="companyFilters">
-                <!-- Company grid items will be injected here -->
-            </div>
-            <div class="modal-footer">
-                <button id="applySelectorBtn" class="btn-primary">Apply Selection</button>
+            <div class="company-grid" id="companyFilters"></div>
+            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
+                <button id="applySelectorBtn" class="btn-icon-text btn-refresh" style="padding: 0.8rem 2.5rem;">Apply Selection</button>
             </div>
         </div>
     </div>
@@ -153,47 +134,48 @@
     <!-- Article Detail Modal -->
     <div id="articleModal" class="modal">
         <div class="modal-content">
-            <span class="close" id="closeModal">&times;</span>
+            <span class="close" id="closeModal" style="position: absolute; right: 2rem; top: 1.5rem;">&times;</span>
             <div id="modalBody"></div>
         </div>
     </div>
 
-    <!-- AI Chat Floating Button & Window -->
+    <!-- AI Chat Wrapper -->
     <div id="aiChatWrapper">
         <div id="aiChatWindow" class="ai-chat-window" style="display: none;">
             <div class="ai-chat-header">
-                <span>🤖 MarketFeed AI Assistant</span>
+                <span><i class="fas fa-robot"></i> MarketFeed AI</span>
                 <span id="closeAiChat" class="close-chat">&times;</span>
             </div>
             <div id="aiChatMessages" class="ai-chat-messages">
-                <div class="ai-message bot">Hello! I'm your MarketFeed AI. I can analyze the news for you. Ask me anything about your companies!</div>
+                <div class="ai-message bot">Hello! I'm your MarketFeed AI. I can analyze news and trends for you. Ask me anything!</div>
             </div>
             <div class="ai-chat-input-area">
-                <input type="text" id="aiChatInput" placeholder="Ask about companies or news...">
-                <button id="sendAiMessage"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="aiChatInput" placeholder="Ask about companies...">
+                <button id="sendAiMessage" class="btn-refresh" style="width: 44px; height: 44px; padding: 0; justify-content: center;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
         <button id="aiChatToggle" class="ai-chat-toggle" title="AI Search & Chat">
-            <i class="fas fa-robot"></i>
+            <i class="fas fa-comment-dots"></i>
         </button>
     </div>
 
     <!-- Strategy Report Modal -->
     <div id="reportModal" class="modal">
-        <div class="modal-content report-modal">
+        <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
-                <h2>CSM Strategic Insights & Strategy Plan</h2>
+                <h2><i class="fas fa-file-contract"></i> Strategic Analysis & Plan</h2>
                 <span class="close" id="closeReportModal">&times;</span>
             </div>
-            <div id="reportContent" class="report-content">
-                <!-- AI generated report will be injected here -->
-                <div class="report-loading">
+            <div id="reportContent" class="report-content" style="padding: 1.5rem 0;">
+                <div class="report-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;">
                     <div class="spinner"></div>
-                    <p>AI is analyzing CSM Strategic Insights and crafting your strategy...</p>
+                    <p>AI is crafting your strategic plan based on latest insights...</p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="downloadReportBtn" class="btn-primary">Download Strategy Report</button>
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button id="downloadReportBtn" class="btn-icon-text btn-refresh">
+                    <i class="fas fa-download"></i> Download Report
+                </button>
             </div>
         </div>
     </div>

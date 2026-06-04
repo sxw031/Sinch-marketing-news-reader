@@ -1,6 +1,4 @@
 const { db_helpers } = require('../models/db');
-const { fetchMultipleRSSFeeds } = require('./rssFeedFetcher');
-const { fetchTechCrunchNews } = require('./techcrunchFetcher');
 const { searchDuckDuckGo, searchBingNews, searchAllPremiumSources } = require('./webSearch');
 const { COMPANIES } = require('../config/sources');
 const moment = require('moment');
@@ -52,28 +50,11 @@ async function fetchNewsForCompany(company) {
   
   let allNews = [];
   
-  // 1. Fetch from RSS feeds (company official feeds)
+  // 1. Official Website & Premium Sources (LinkedIn, etc.)
   try {
-    if (companyConfig.sources && companyConfig.sources.length > 0) {
-      const rssFeedUrls = companyConfig.sources
-        .filter(s => s.type === 'rss')
-        .map(s => s.url);
-      
-      if (rssFeedUrls.length > 0) {
-        console.log(`Fetching RSS feeds for ${company}...`);
-        const rssNews = await fetchMultipleRSSFeeds(rssFeedUrls, company);
-        allNews = allNews.concat(rssNews);
-      }
-    }
-  } catch (error) {
-    console.error(`Error fetching RSS feeds for ${company}:`, error.message);
-  }
-
-  // 2. Fetch from Premium Sources (LinkedIn, NYT, WSJ, Bloomberg, Official Website)
-  try {
-    console.log(`Fetching Premium Sources for ${company}...`);
+    console.log(`Fetching Premium Sources (Official & LinkedIn) for ${company}...`);
     const premiumNews = await searchAllPremiumSources(company, { 
-        limit: 5,
+        limit: 10,
         domain: companyConfig.domain 
     });
     allNews = allNews.concat(premiumNews);
@@ -81,17 +62,9 @@ async function fetchNewsForCompany(company) {
     console.error(`Error fetching Premium Sources for ${company}:`, error.message);
   }
 
-  // 3. Fetch from TechCrunch
+  // 2. Web search (DuckDuckGo & Bing)
   try {
-    console.log(`Fetching TechCrunch news for ${company}...`);
-    const techcrunchNews = await fetchTechCrunchNews(company, { limit: 10 });
-    allNews = allNews.concat(techcrunchNews);
-  } catch (error) {
-    console.error(`Error fetching TechCrunch news for ${company}:`, error.message);
-  }
-
-  // 4. Web search (DuckDuckGo & Bing)
-  try {
+    console.log(`Web searching (Bing/DDG) for ${company}...`);
     const [ddgNews, bingNews] = await Promise.all([
         searchDuckDuckGo(company, { limit: 10 }),
         searchBingNews(company, { limit: 10 })

@@ -34,7 +34,7 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 app.use('/api/news', newsRoutes);
 
 // AI Chat Endpoint
-app.post('/api/ai/chat', async (req, res) => {
+app.post('/api/news/ai/chat', async (req, res) => {
     try {
         const { query, context } = req.body;
         
@@ -63,7 +63,7 @@ app.post('/api/ai/chat', async (req, res) => {
 });
 
 // AI Strategy Report Endpoint
-app.post('/api/ai/strategy', async (req, res) => {
+app.post('/api/news/ai/strategy', async (req, res) => {
     try {
         const { news } = req.body;
         
