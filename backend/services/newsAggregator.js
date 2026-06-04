@@ -223,8 +223,8 @@ async function getNews(filters = {}) {
   }
   
   if (filters.startDate) {
-    // Ensure precise datetime comparison
-    sql += " AND datetime(publishedAt) >= datetime(?)";
+    // Use string comparison for ISO dates, which is robust in SQLite
+    sql += " AND publishedAt >= ?";
     params.push(filters.startDate);
   }
   

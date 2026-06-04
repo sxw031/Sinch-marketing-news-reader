@@ -1,12 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-let dbPath = process.env.DB_PATH || path.join(process.cwd(), 'news.db');
-
-// Ensure absolute path
-if (!path.isAbsolute(dbPath)) {
-  dbPath = path.resolve(process.cwd(), dbPath);
-}
+let dbPath = process.env.DB_PATH || path.resolve(__dirname, '../news.db');
 
 const dataDir = path.dirname(dbPath);
 if (dataDir !== process.cwd()) {
@@ -27,7 +22,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     // Optimize SQLite for high concurrency and prevent locking warnings
     db.run('PRAGMA journal_mode = WAL');
     db.run('PRAGMA synchronous = NORMAL');
-    db.run('PRAGMA busy_timeout = 10000'); // 10s timeout
+    db.run('PRAGMA busy_timeout = 15000'); // 15s timeout
     db.run('PRAGMA cache_size = -2000'); // 2MB cache
     initializeDatabase();
   }

@@ -35,17 +35,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedCompanies = JSON.parse(saved);
     }
 
-    // Set default time range to 24h on initial load
+    // Set default time range to 1w on initial load for better content density
     const now = new Date();
     const start = new Date();
-    start.setHours(now.getHours() - 24);
+    start.setDate(now.getDate() - 7);
     activeTimeRange = start.toISOString();
 
     await loadCompanies();
     await loadNews();
     
-    // Highlight the 24h button by default
-    const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="24h"]');
+    // Highlight the 1w button by default
+    const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="1w"]');
     if (defaultTimeBtn) defaultTimeBtn.classList.add('active');
     
     setupEventListeners();
