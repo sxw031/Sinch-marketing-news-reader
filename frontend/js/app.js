@@ -596,7 +596,8 @@ function startStatusPolling(btn, originalText) {
                     btn.disabled = false;
                     btn.querySelector('i').classList.remove('fa-spin');
                 }
-                await loadNews(false, false); // Final update
+                // Final update: ensure we load with current filters and no spinner if silent
+                await loadNews(false, false); 
             }
         } catch (error) {
             console.error('Polling error:', error);
