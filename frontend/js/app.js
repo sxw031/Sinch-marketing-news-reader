@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadCompanies();
   await loadNews();
+  await loadSources();
   setupEventListeners();
 
   // Highlight 24h button
@@ -51,6 +52,25 @@ async function loadCompanies() {
       renderCompanyGrid();
     }
   } catch (e) { console.error('loadCompanies:', e); }
+}
+
+async function loadSources() {
+  try {
+    const res = await fetch(`${API_BASE}/sources`);
+    const data = await res.json();
+    if (data.success && data.data.length > 0) {
+      const select = document.getElementById('sourceFilter');
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">All Sources</option>';
+      data.data.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+    }
+  } catch (e) { console.error('loadSources:', e); }
 }
 
 async function loadNews(silent = false) {
@@ -298,20 +318,32 @@ function setupEventListeners() {
       podcastBtn.classList.add('loading');
       podcastBtn.querySelector('span').textContent = 'Generating...';
       const res = await fetch(`${API_BASE}/podcast`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Podcast generation failed');
-      }
-      const blob = await res.blob();
-      podcastPlayer.src = URL.createObjectURL(blob);
-      podcastPlayer.play();
-      podcastBtn.classList.remove('loading');
-      podcastBtn.classList.add('playing');
-      podcastBtn.querySelector('span').textContent = 'Playing...';
-      podcastPlayer.onended = () => {
-        podcastBtn.classList.remove('playing');
+      const contentType = res.headers.get('content-type') || '';
+      
+      if (contentType.includes('audio')) {
+        // Got audio back - play it
+        const blob = await res.blob();
+        podcastPlayer.src = URL.createObjectURL(blob);
+        podcastPlayer.play();
+        podcastBtn.classList.remove('loading');
+        podcastBtn.classList.add('playing');
+        podcastBtn.querySelector('span').textContent = 'Playing...';
+        podcastPlayer.onended = () => {
+          podcastBtn.classList.remove('playing');
+          podcastBtn.querySelector('span').textContent = 'Daily Podcast';
+        };
+      } else {
+        // Got JSON back - either error or fallback script
+        const data = await res.json();
+        if (data.fallback && data.script) {
+          // Show script in a modal since TTS is unavailable
+          alert('Audio synthesis is temporarily unavailable. Here is the podcast script:\n\n' + data.script.substring(0, 500) + '...');
+        } else if (!data.success) {
+          throw new Error(data.error || 'Podcast generation failed');
+        }
+        podcastBtn.classList.remove('loading');
         podcastBtn.querySelector('span').textContent = 'Daily Podcast';
-      };
+      }
     } catch (e) {
       console.error('Podcast:', e);
       alert(`Podcast error: ${e.message}`);

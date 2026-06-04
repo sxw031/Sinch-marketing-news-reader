@@ -1,4 +1,6 @@
 const { aggregateAllNews, getNews, getNewsCount, getAvailableCompanies, getSources } = require('../services/newsAggregator');
+const { generateHeuristicReport } = require('../services/strategyEngine');
+const { generateSpeech, generatePodcastScript, generateReportScript } = require('../services/ttsService');
 const { COMPANIES } = require('../config/sources');
 
 // --- Aggregation State ---
@@ -50,7 +52,6 @@ async function triggerAggregation(req, res) {
     return res.json({ success: true, message: 'Already in progress', status: aggregationState });
   }
 
-  // Respond immediately, run in background
   aggregationState = {
     inProgress: true,
     currentCompany: null,
@@ -60,7 +61,6 @@ async function triggerAggregation(req, res) {
   };
   res.json({ success: true, message: 'Aggregation started' });
 
-  // Background execution
   try {
     await aggregateAllNews({
       onProgress: (companyName) => {
@@ -85,77 +85,84 @@ function getAggregationStatus(req, res) {
   res.json({ success: true, status: aggregationState });
 }
 
-function getAggregationStateObj() {
-  return aggregationState;
-}
-
+/**
+ * Podcast generation - uses Edge TTS (free, no API key needed)
+ * Generates a professional news anchor-style briefing from latest news
+ */
 async function getPodcast(req, res) {
   try {
-    const { OpenAI } = require('openai');
-    const client = new OpenAI();
-
     // Get latest news from DB (no time restriction)
-    const news = await getNews({ limit: 15 });
+    const news = await getNews({ limit: 20 });
     if (news.length === 0) {
       return res.status(404).json({ success: false, error: 'No news available yet. Please wait for sync to complete.' });
     }
 
-    const newsContext = news.map(n => `[${n.company}] ${n.title}: ${n.description || ''}`).join('\n');
-
     // Generate podcast script
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are a professional business news anchor. Create a compelling 3-minute podcast script summarizing the key strategic developments. Use a warm, authoritative tone. Structure: brief intro, 3-4 key stories with analysis, closing thoughts. Keep it concise and insightful. Write in English.' },
-        { role: 'user', content: `Today\'s top business developments:\n${newsContext}` }
-      ]
+    const script = generatePodcastScript(news);
+    if (!script) {
+      return res.status(500).json({ success: false, error: 'Failed to generate podcast script' });
+    }
+
+    console.log(`[Podcast] Generating audio for ${script.length} chars...`);
+
+    // Generate audio via Edge TTS
+    const audioBuffer = await generateSpeech(script);
+    
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length,
+      'Cache-Control': 'public, max-age=300'
     });
-
-    const script = completion.choices[0].message.content;
-
-    // Generate audio
-    const mp3 = await client.audio.speech.create({
-      model: 'tts-1-hd',
-      voice: 'onyx',
-      input: script
-    });
-
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-    res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
-    res.send(buffer);
+    res.send(audioBuffer);
   } catch (error) {
     console.error('[Podcast] Error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: `Podcast generation failed: ${error.message}` });
   }
 }
 
+/**
+ * Report speech synthesis - reads the strategy report aloud
+ */
 async function getReportSpeech(req, res) {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ success: false, error: 'No text provided' });
 
-    const { OpenAI } = require('openai');
-    const client = new OpenAI();
+    // Generate summary script from report
+    const script = generateReportScript(text);
+    if (!script) {
+      return res.status(500).json({ success: false, error: 'Failed to generate report script' });
+    }
 
-    const summary = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'Summarize this strategic report into a 2-minute professional audio briefing script. Be concise, highlight key action items.' },
-        { role: 'user', content: text }
-      ]
+    console.log(`[ReportSpeech] Generating audio for ${script.length} chars...`);
+
+    // Generate audio via Edge TTS
+    const audioBuffer = await generateSpeech(script);
+    
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length
     });
-
-    const mp3 = await client.audio.speech.create({
-      model: 'tts-1',
-      voice: 'onyx',
-      input: summary.choices[0].message.content
-    });
-
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-    res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length });
-    res.send(buffer);
+    res.send(audioBuffer);
   } catch (error) {
     console.error('[ReportSpeech] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+/**
+ * AI Strategy Report - uses heuristic engine (no AI needed)
+ */
+async function generateStrategy(req, res) {
+  try {
+    const { news } = req.body;
+    if (!news || news.length === 0) {
+      return res.json({ success: true, report: generateHeuristicReport([]) });
+    }
+    const report = generateHeuristicReport(news);
+    res.json({ success: true, report });
+  } catch (error) {
+    console.error('[Strategy]', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 }
@@ -182,8 +189,8 @@ module.exports = {
   getSourcesList,
   triggerAggregation,
   getAggregationStatus,
-  getAggregationStateObj,
   getPodcast,
   getReportSpeech,
+  generateStrategy,
   getDebugStats
 };

@@ -17,56 +17,47 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // API Routes
 app.use('/api/news', newsRoutes);
 
-// AI Chat
-app.post('/api/news/ai/chat', async (req, res) => {
-  try {
-    const { query, context } = req.body;
-    const { OpenAI } = require('openai');
-    const client = new OpenAI();
-
-    const newsContext = (context || []).map(n => `[${n.company}] ${n.title}: ${n.description || ''}`).join('\n');
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are MarketFeed AI, a business intelligence assistant. Answer questions based on the provided news context. Be concise and insightful.' },
-        { role: 'user', content: `News Context:\n${newsContext}\n\nQuestion: ${query}` }
-      ]
-    });
-    res.json({ success: true, answer: completion.choices[0].message.content });
-  } catch (error) {
-    console.error('[AI Chat]', error.message);
-    res.json({ success: true, answer: 'AI is temporarily unavailable. Please try again later.' });
-  }
-});
-
-// AI Strategy Report
+// AI Strategy Report (heuristic, no API key needed)
 app.post('/api/news/ai/strategy', async (req, res) => {
   try {
     const { news } = req.body;
     if (!news || news.length === 0) {
       return res.json({ success: true, report: generateHeuristicReport([]) });
     }
-
-    // Try OpenAI first, fallback to heuristic
-    try {
-      const { OpenAI } = require('openai');
-      const client = new OpenAI();
-      const newsStr = news.map(n => `[${n.company}] ${n.title}: ${n.description || ''}`).join('\n');
-      const completion = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are a Senior Customer Success Manager. Generate a strategic analysis report based on the news. Use markdown with bold headings, clear sections per company, and actionable recommendations. Include: Executive Summary, Key Opportunities by Company, Risk Alerts, and Recommended Actions.' },
-          { role: 'user', content: `Strategic News:\n${newsStr}` }
-        ]
-      });
-      return res.json({ success: true, report: completion.choices[0].message.content });
-    } catch (aiErr) {
-      console.log('[Strategy] OpenAI unavailable, using heuristic engine');
-      return res.json({ success: true, report: generateHeuristicReport(news) });
-    }
+    const report = generateHeuristicReport(news);
+    res.json({ success: true, report });
   } catch (error) {
     console.error('[Strategy]', error.message);
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// AI Chat (heuristic, no API key needed)
+app.post('/api/news/ai/chat', async (req, res) => {
+  try {
+    const { query, context } = req.body;
+    if (!query) return res.json({ success: true, answer: 'Please ask a question.' });
+
+    // Simple keyword-based response from news context
+    const q = query.toLowerCase();
+    const relevant = (context || []).filter(n => {
+      const text = ((n.title || '') + ' ' + (n.description || '') + ' ' + (n.company || '')).toLowerCase();
+      return q.split(' ').some(word => word.length > 3 && text.includes(word));
+    });
+
+    if (relevant.length > 0) {
+      let answer = `Based on recent news, here's what I found:\n\n`;
+      relevant.slice(0, 5).forEach(n => {
+        answer += `• **${n.company}**: ${n.title}\n`;
+      });
+      answer += `\n_Found ${relevant.length} related articles._`;
+      res.json({ success: true, answer });
+    } else {
+      res.json({ success: true, answer: `I couldn't find specific news matching "${query}". Try asking about one of the tracked companies or a broader topic.` });
+    }
+  } catch (error) {
+    console.error('[AI Chat]', error.message);
+    res.json({ success: true, answer: 'Sorry, I encountered an error processing your question.' });
   }
 });
 

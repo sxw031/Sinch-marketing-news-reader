@@ -1,149 +1,163 @@
 /**
- * Heuristic Strategy Engine v2
- * Generates beautifully formatted strategic plans without requiring an AI API Key
+ * Heuristic Strategy Engine v3
+ * Generates beautifully formatted strategic reports - no AI API needed
  */
 
 const STRATEGY_TEMPLATES = {
-    EXPANSION: {
-        title: "🚀 Market Expansion & Growth Strategy",
-        emoji: "🌐",
-        points: [
-            "Leverage Sinch's global messaging footprint to support their new market entry.",
-            "Offer localized number provisioning and compliance consulting in the new regions.",
-            "Propose a scalable API architecture to handle increased traffic from new user segments."
-        ]
-    },
-    PARTNERSHIP: {
-        title: "🤝 Ecosystem & Partnership Integration",
-        emoji: "🔗",
-        points: [
-            "Identify cross-platform integration opportunities between Sinch and their new partners.",
-            "Develop co-marketing materials highlighting the combined value proposition.",
-            "Explore joint technical workshops to streamline the integration of Sinch's voice and video APIs."
-        ]
-    },
-    FINANCIAL: {
-        title: "💰 Revenue Optimization & Financial Stability",
-        emoji: "📈",
-        points: [
-            "Analyze their current messaging volume to propose more cost-effective committed-use tiers.",
-            "Introduce fraud prevention tools (Sinch Verification) to protect their growing transaction volume.",
-            "Offer financial reporting automation through Sinch's analytics dashboard."
-        ]
-    },
-    TECHNOLOGY: {
-        title: "💻 Digital Transformation & Tech Innovation",
-        emoji: "✨",
-        points: [
-            "Pitch Sinch's AI-powered conversational platform to modernize their customer support.",
-            "Demonstrate how Sinch's rich messaging (RCS/WhatsApp) can improve their mobile engagement rates.",
-            "Recommend migrating legacy SMS notifications to a unified omni-channel API."
-        ]
-    },
-    ISSUE: {
-        title: "⚠️ Risk Mitigation & Service Recovery",
-        emoji: "🛡️",
-        points: [
-            "Propose Sinch's redundant routing capabilities to ensure 99.99% uptime for their critical services.",
-            "Set up automated monitoring and alerting for their API traffic to preempt future issues.",
-            "Conduct a technical audit to identify and fix bottlenecks in their current communication flow."
-        ]
-    },
-    GENERAL: {
-        title: "🎯 Strategic Account Management",
-        emoji: "📋",
-        points: [
-            "Schedule a quarterly business review (QBR) to align Sinch's roadmap with their 2024 goals.",
-            "Identify key stakeholders in their newly formed departments for relationship building.",
-            "Offer a personalized demo of Sinch's latest features tailored to their industry vertical."
-        ]
-    }
+  EXPANSION: {
+    title: 'Market Expansion & Growth',
+    icon: '🚀',
+    actions: [
+      'Leverage Sinch messaging infrastructure to support new market entry communications',
+      'Offer localized number provisioning and compliance consulting for target regions',
+      'Propose scalable API architecture to handle increased traffic from new user segments',
+      'Develop go-to-market communication playbook using Sinch omnichannel capabilities'
+    ]
+  },
+  PARTNERSHIP: {
+    title: 'Ecosystem & Partnership Integration',
+    icon: '🤝',
+    actions: [
+      'Identify cross-platform integration opportunities with Sinch APIs',
+      'Develop co-marketing materials highlighting combined value proposition',
+      'Explore joint technical workshops for voice and video API integration',
+      'Map partner ecosystem touchpoints for Sinch product placement'
+    ]
+  },
+  FINANCIAL: {
+    title: 'Revenue & Financial Strategy',
+    icon: '💰',
+    actions: [
+      'Analyze messaging volume to propose cost-effective committed-use tiers',
+      'Introduce Sinch Verification tools to protect growing transaction volume',
+      'Offer financial reporting automation through analytics dashboard',
+      'Identify upsell opportunities based on revenue growth trajectory'
+    ]
+  },
+  TECHNOLOGY: {
+    title: 'Digital Transformation & Innovation',
+    icon: '💻',
+    actions: [
+      'Pitch Sinch AI-powered conversational platform for customer support modernization',
+      'Demonstrate rich messaging (RCS/WhatsApp) for improved mobile engagement',
+      'Recommend migration from legacy SMS to unified omni-channel API',
+      'Propose chatbot integration for automated customer journey optimization'
+    ]
+  },
+  ISSUE: {
+    title: 'Risk Mitigation & Recovery',
+    icon: '⚠️',
+    actions: [
+      'Propose Sinch redundant routing for 99.99% uptime on critical services',
+      'Set up automated monitoring and alerting for API traffic anomalies',
+      'Conduct technical audit to identify communication flow bottlenecks',
+      'Develop crisis communication playbook using Sinch broadcast capabilities'
+    ]
+  },
+  GENERAL: {
+    title: 'Strategic Account Management',
+    icon: '🎯',
+    actions: [
+      'Schedule quarterly business review to align Sinch roadmap with client goals',
+      'Identify key stakeholders for relationship building and expansion',
+      'Offer personalized demo of latest Sinch features for their vertical',
+      'Develop account growth plan with clear milestones and KPIs'
+    ]
+  }
 };
 
 const KEYWORD_MAP = {
-    EXPANSION: ['expand', 'growth', 'launch', 'new market', 'opening', 'acquisition', 'merger', 'hiring'],
-    PARTNERSHIP: ['partnership', 'collaboration', 'joint venture', 'alliance', 'agreement'],
-    FINANCIAL: ['revenue', 'profit', 'earnings', 'quarterly', 'funding', 'investment', 'stock', 'ipo'],
-    TECHNOLOGY: ['ai', 'software', 'platform', 'app', 'digital', 'update', 'innovation', 'cloud'],
-    ISSUE: ['outage', 'downtime', 'issue', 'problem', 'layoff', 'drop', 'decline', 'loss']
+  EXPANSION: ['expand', 'growth', 'launch', 'new market', 'opening', 'acquisition', 'merger', 'hiring', 'enter', 'scale'],
+  PARTNERSHIP: ['partnership', 'collaboration', 'joint venture', 'alliance', 'agreement', 'deal', 'contract', 'signed'],
+  FINANCIAL: ['revenue', 'profit', 'earnings', 'quarterly', 'funding', 'investment', 'stock', 'ipo', 'dividend', 'fiscal'],
+  TECHNOLOGY: ['ai', 'software', 'platform', 'app', 'digital', 'update', 'innovation', 'cloud', 'machine learning', 'api'],
+  ISSUE: ['outage', 'downtime', 'issue', 'problem', 'layoff', 'drop', 'decline', 'loss', 'breach', 'fine', 'penalty']
 };
 
+function classifyNews(title, description) {
+  const text = ((title || '') + ' ' + (description || '')).toLowerCase();
+  for (const [type, keywords] of Object.entries(KEYWORD_MAP)) {
+    if (keywords.some(kw => text.includes(kw))) return type;
+  }
+  return 'GENERAL';
+}
+
 function generateHeuristicReport(newsArticles) {
-    if (!newsArticles || newsArticles.length === 0) {
-        return "### 📭 Sinch Strategic Analysis Report\n\nNo recent strategic news found to analyze. Please try a broader time range or select more companies.";
-    }
+  if (!newsArticles || newsArticles.length === 0) {
+    return '# MarketFeed Strategic Report\n\nNo recent news available to analyze. Please sync news first or select a broader time range.';
+  }
 
-    const analysisMap = new Map();
-    const companyNames = [...new Set(newsArticles.map(a => a.company))];
+  const companyNames = [...new Set(newsArticles.map(a => a.company))];
+  const date = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    newsArticles.forEach(article => {
-        const content = (article.title + " " + article.description).toLowerCase();
-        let matched = false;
+  // Classify all articles
+  const analysisMap = new Map();
+  newsArticles.forEach(article => {
+    const type = classifyNews(article.title, article.description);
+    if (!analysisMap.has(type)) analysisMap.set(type, []);
+    analysisMap.get(type).push(article);
+  });
 
-        for (const [type, keywords] of Object.entries(KEYWORD_MAP)) {
-            if (keywords.some(kw => content.includes(kw))) {
-                if (!analysisMap.has(type)) analysisMap.set(type, []);
-                analysisMap.get(type).push(article);
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) {
-            if (!analysisMap.has('GENERAL')) analysisMap.set('GENERAL', []);
-            analysisMap.get('GENERAL').push(article);
-        }
+  // Build report
+  let report = '';
+  report += `# 📊 MarketFeed Strategic Briefing\n`;
+  report += `> **Sinch Account Intelligence Report** | ${date}\n`;
+  report += `> ${newsArticles.length} signals analyzed across ${companyNames.length} companies\n\n`;
+  report += `---\n\n`;
+
+  // Executive Summary
+  report += `## **Executive Summary**\n`;
+  const types = [...analysisMap.keys()];
+  report += `Our intelligence scan detected activity in **${types.length} strategic categories**: `;
+  report += types.map(t => STRATEGY_TEMPLATES[t]?.title || t).join(', ') + '. ';
+  report += `This presents ${types.includes('EXPANSION') || types.includes('PARTNERSHIP') ? 'significant' : 'notable'} opportunities for Sinch engagement.\n\n`;
+
+  // Priority Opportunities
+  report += `## **Priority Opportunities**\n\n`;
+
+  for (const [type, articles] of analysisMap.entries()) {
+    const template = STRATEGY_TEMPLATES[type] || STRATEGY_TEMPLATES.GENERAL;
+    const companies = [...new Set(articles.map(a => a.company))];
+
+    report += `### ${template.icon} **${template.title}**\n`;
+    report += `**Signals:** ${articles.length} | **Companies:** ${companies.join(', ')}\n\n`;
+
+    // Show top 2 news items as evidence
+    articles.slice(0, 2).forEach(a => {
+      report += `> *${a.company}*: ${a.title}\n`;
     });
+    report += `\n`;
 
-    let report = `# 📊 MarketFeed Strategic Briefing\n`;
-    report += `> **Intelligence Report for Sinch Account Teams**\n`;
-    report += `> 📅 ${new Date().toLocaleDateString()} | 🔍 ${newsArticles.length} insights | 🏢 ${companyNames.length} Companies\n\n`;
-    
-    report += `[Click "Listen to Report" at the top to play the audio summary]\n\n`;
-    report += `![Strategic Analysis](https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80)\n\n`;
-
-    report += `## 1️⃣ Executive Summary\n`;
-    report += `***\n`;
-    report += `Our analysis reveals movement in **${[...analysisMap.keys()].map(k => k.toLowerCase()).join(', ')}** sectors. This presents a strategic window for Sinch to reinforce its role as a partner.\n\n`;
-
-    report += `## 2️⃣ Strategic Opportunities\n`;
-    report += `***\n`;
-
-    for (const [type, articles] of analysisMap.entries()) {
-        const template = STRATEGY_TEMPLATES[type] || STRATEGY_TEMPLATES.GENERAL;
-        const typeImages = {
-            EXPANSION: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=400&q=60',
-            PARTNERSHIP: 'https://images.unsplash.com/photo-1521791136064-7986c2959210?auto=format&fit=crop&w=400&q=60',
-            FINANCIAL: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=400&q=60',
-            TECHNOLOGY: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=400&q=60',
-            ISSUE: 'https://images.unsplash.com/photo-1590272456521-1bbe160a18ce?auto=format&fit=crop&w=400&q=60',
-            GENERAL: 'https://images.unsplash.com/photo-1454165833767-6216d503f1a1?auto=format&fit=crop&w=400&q=60'
-        };
-
-        report += `### **${template.title}**\n`;
-        report += `![${type}](${typeImages[type]})\n`;
-        report += `**Context:** ${articles.length} updates from **${[...new Set(articles.map(a => a.company))].join(', ')}**.\n`;
-        report += `#### **Action Plan:**\n`;
-        template.points.forEach(point => {
-            report += `* **${point.split(' ')[0]}** ${point.split(' ').slice(1).join(' ')}\n`;
-        });
-        report += `***\n`;
-    }
-
-    report += `## 3️⃣ Deep Dive by Company\n`;
-    report += `***\n`;
-    
-    companyNames.forEach(company => {
-        const companyNews = newsArticles.filter(a => a.company === company);
-        report += `### 🏢 **${company.toUpperCase()}** (${companyNews.length} signals)\n`;
-        companyNews.slice(0, 3).forEach(a => {
-            report += `* **${a.title}**\n`;
-            report += `  _${a.description.substring(0, 120)}..._ [Link](${a.url})\n`;
-        });
+    // Action items
+    report += `**Recommended Actions:**\n`;
+    template.actions.slice(0, 3).forEach(action => {
+      report += `- ${action}\n`;
     });
+    report += `\n---\n\n`;
+  }
 
-    report += `\n\n***\n*Generated by MarketFeed Strategic Engine v3.0 | Sinch Internal Use Only*`;
+  // Company Deep Dive
+  report += `## **Company Deep Dive**\n\n`;
 
-    return report;
+  companyNames.forEach(company => {
+    const companyNews = newsArticles.filter(a => a.company === company);
+    report += `### 🏢 **${company}** (${companyNews.length} signals)\n`;
+
+    companyNews.slice(0, 3).forEach(a => {
+      const category = classifyNews(a.title, a.description);
+      const icon = STRATEGY_TEMPLATES[category]?.icon || '📋';
+      report += `- ${icon} **${a.title}**\n`;
+      if (a.description) {
+        report += `  ${a.description.substring(0, 120)}...\n`;
+      }
+    });
+    report += `\n`;
+  });
+
+  report += `---\n`;
+  report += `*Generated by MarketFeed Strategy Engine v3.0 | Sinch Internal Use Only*\n`;
+
+  return report;
 }
 
 module.exports = { generateHeuristicReport };

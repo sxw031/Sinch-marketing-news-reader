@@ -32,9 +32,8 @@ async function storeArticles(articles) {
       `);
 
       for (const a of articles) {
-        const publishedAt = a.publishedAt
-          ? new Date(a.publishedAt).toISOString().replace('T', ' ').replace('Z', '').split('.')[0]
-          : new Date().toISOString().replace('T', ' ').replace('Z', '').split('.')[0];
+        // Always store as "YYYY-MM-DD HH:MM:SS" format (no T, no Z)
+        const publishedAt = normalizeDate(a.publishedAt);
 
         stmt.run([
           a.company,
@@ -58,6 +57,16 @@ async function storeArticles(articles) {
   });
 }
 
+/**
+ * Normalize any date input to "YYYY-MM-DD HH:MM:SS" format for consistent DB storage and querying
+ */
+function normalizeDate(input) {
+  if (!input) return new Date().toISOString().replace('T', ' ').split('.')[0];
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return new Date().toISOString().replace('T', ' ').split('.')[0];
+  return d.toISOString().replace('T', ' ').split('.')[0];
+}
+
 // --- Aggregation Engine ---
 async function aggregateAllNews(options = {}) {
   const { onProgress, onError } = options;
@@ -66,7 +75,7 @@ async function aggregateAllNews(options = {}) {
 
   console.log(`[Aggregator] Starting sync for ${COMPANIES.length} companies...`);
 
-  // Process 3 companies at a time for speed without overwhelming resources
+  // Process 3 companies at a time
   const BATCH_SIZE = 3;
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
@@ -96,7 +105,6 @@ async function aggregateAllNews(options = {}) {
       .filter(r => r.status === 'fulfilled')
       .reduce((sum, r) => sum + r.value, 0);
 
-    // Brief pause between batches
     if (i + BATCH_SIZE < COMPANIES.length) {
       await new Promise(r => setTimeout(r, 500));
     }
@@ -121,14 +129,15 @@ async function getNews(filters = {}) {
     params.push(filters.company);
   }
 
+  // CRITICAL FIX: Normalize incoming ISO dates to match DB format "YYYY-MM-DD HH:MM:SS"
   if (filters.startDate) {
     sql += ' AND publishedAt >= ?';
-    params.push(filters.startDate);
+    params.push(normalizeDate(filters.startDate));
   }
 
   if (filters.endDate) {
     sql += ' AND publishedAt <= ?';
-    params.push(filters.endDate);
+    params.push(normalizeDate(filters.endDate));
   }
 
   if (filters.category) {
@@ -177,5 +186,6 @@ module.exports = {
   getAvailableCompanies,
   getSources,
   storeArticles,
-  classifyArticle
+  classifyArticle,
+  normalizeDate
 };
