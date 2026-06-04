@@ -35,17 +35,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedCompanies = JSON.parse(saved);
     }
 
-    // Set default time range to 1w on initial load for better content density
+    // Set default time range to 6h on initial load for maximum speed and recency
     const now = new Date();
     const start = new Date();
-    start.setDate(now.getDate() - 7);
+    start.setHours(now.getHours() - 6);
     activeTimeRange = start.toISOString();
 
     await loadCompanies();
     await loadNews();
     
-    // Highlight the 1w button by default
-    const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="1w"]');
+    // Highlight the 6h button by default
+    const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="6h"]');
     if (defaultTimeBtn) defaultTimeBtn.classList.add('active');
     
     setupEventListeners();
@@ -329,10 +329,10 @@ function setupEventListeners() {
         e.preventDefault();
         selectedCompanies = [];
         
-        // Reset to default 24h range
+        // Reset to default 6h range
         const now = new Date();
         const start = new Date();
-        start.setHours(now.getHours() - 24);
+        start.setHours(now.getHours() - 6);
         activeTimeRange = start.toISOString();
         
         document.getElementById('categoryFilter').value = '';
@@ -340,7 +340,7 @@ function setupEventListeners() {
         document.getElementById('searchInput').value = '';
         
         document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
-        const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="24h"]');
+        const defaultTimeBtn = document.querySelector('.btn-quick-time[data-range="6h"]');
         if (defaultTimeBtn) defaultTimeBtn.classList.add('active');
         
         localStorage.removeItem(SELECTED_COMPANIES_KEY);

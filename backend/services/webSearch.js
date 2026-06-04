@@ -79,7 +79,8 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
       const baseDelay = site === 'linkedin.com' ? 2500 : 800;
       await sleep(baseDelay + Math.random() * 1500);
       
-      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      // Use DuckDuckGo time filter: 'd' for past day to ensure recency
+      const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&df=d`;
       try {
         const response = await fetchWithRetry(url);
         const $ = cheerio.load(response.data);
