@@ -101,15 +101,19 @@ async function fetchNewsForCompany(company) {
 async function aggregateAllNews(options = {}) {
   const isStrategicOnly = options.strategicOnly !== false;
   const { onProgress, onError } = options;
-  console.log(`Starting ${isStrategicOnly ? 'Strategic' : 'Full'} news aggregation with TaskCoordinator (Concurrency: 5)...`);
+  console.log(`Starting EXTREME news aggregation with TaskCoordinator (Concurrency: 10)...`);
   const startTime = new Date();
   
-  // High-performance TaskCoordinator: 5 concurrent companies for "Sub-Minute" sync
-  const BATCH_SIZE = 5; 
+  // Extreme Performance: Concurrency 10 for Render Free Tier
+  // We use a small delay between tasks within a batch to prevent CPU spikes
+  const BATCH_SIZE = 10; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
-    await Promise.all(batch.map(async (company) => {
+    await Promise.all(batch.map(async (company, index) => {
+      // Staggered start within batch (200ms) to spread CPU load
+      await new Promise(r => setTimeout(r, index * 200));
+      
       try {
         if (onProgress) onProgress(company.name);
         
@@ -120,7 +124,6 @@ async function aggregateAllNews(options = {}) {
             category: classifyArticle(article.title, article.description)
           }));
 
-          // Filter for Strategic Insights if requested
           if (isStrategicOnly) {
             processedNews = processedNews.filter(a => a.category === 'Strategic Insights');
           }
@@ -135,14 +138,15 @@ async function aggregateAllNews(options = {}) {
       }
     }));
     
-    // Minimal delay between batches to maximize throughput
+    // Memory Guard: Small pause to allow GC to run on Render Free
     if (i + BATCH_SIZE < COMPANIES.length) {
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (global.gc) global.gc(); 
     }
   }
   
   const duration = new Date() - startTime;
-  console.log(`\n✅ TaskCoordinator finished sync in ${Math.round(duration/1000)}s`);
+  console.log(`\n✅ Extreme Sync finished in ${Math.round(duration/1000)}s`);
 }
 
 async function storeNews(articles, company) {

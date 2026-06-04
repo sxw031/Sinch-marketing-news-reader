@@ -24,6 +24,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Database error:', err.message);
   else {
     console.log('Connected to SQLite at', dbPath);
+    // Optimize SQLite for high concurrency and prevent locking warnings
+    db.run('PRAGMA journal_mode = WAL');
+    db.run('PRAGMA synchronous = NORMAL');
+    db.run('PRAGMA busy_timeout = 10000'); // 10s timeout
+    db.run('PRAGMA cache_size = -2000'); // 2MB cache
     initializeDatabase();
   }
 });
@@ -35,6 +40,7 @@ function initializeDatabase() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_fetchedAt ON news(fetchedAt)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_category ON news(category)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_filter ON news(company, publishedAt, category)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_url ON news(url)`);
   });
 }
 const db_helpers = {
