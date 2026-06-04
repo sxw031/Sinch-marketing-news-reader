@@ -11,6 +11,7 @@ const app = express();
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 let openai = null;
+let isAggregating = false;
 
 // Only initialize if it looks like a real key (starts with sk-)
 if (openaiApiKey && openaiApiKey.startsWith('sk-')) {
@@ -92,13 +93,35 @@ app.post('/api/news/ai/strategy', async (req, res) => {
     }
 });
 
+// Manual aggregation endpoint
+app.post('/api/news/aggregate', async (req, res) => {
+  if (isAggregating) {
+    return res.status(429).json({ success: false, message: 'Aggregation already in progress' });
+  }
+  
+  const isFull = req.query.full === 'true';
+  isAggregating = true;
+  console.log(`Manual ${isFull ? 'Full' : 'Strategic'} aggregation triggered...`);
+  
+  // Run aggregation in background
+  aggregateAllNews({ strategicOnly: !isFull }).then(() => {
+    isAggregating = false;
+  }).catch(err => {
+    console.error('Manual aggregation error:', err);
+    isAggregating = false;
+  });
+  
+  res.json({ success: true, message: `Aggregation (${isFull ? 'Full' : 'Strategic'}) started` });
+});
+
 // Health check endpoint for Render
 app.get('/api/health', (req, res) => { 
   res.json({ 
     success: true, 
     message: 'Marketing News Reader is running', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    isAggregating
   }); 
 });
 
@@ -121,19 +144,30 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   // Perform initial news aggregation in a non-blocking way
   setImmediate(async () => {
     try {
-        console.log('Starting initial news aggregation in background...');
-        // Add a small delay to ensure DB is fully ready
+        if (isAggregating) return;
+        isAggregating = true;
+        console.log('Starting initial strategic news aggregation in background...');
         await new Promise(resolve => setTimeout(resolve, 2000));
-        aggregateAllNews().catch(err => console.error('Initial aggregation error:', err));
+        await aggregateAllNews({ strategicOnly: true });
+        isAggregating = false;
     } catch (err) {
         console.error('Failed to trigger initial aggregation:', err);
+        isAggregating = false;
     }
   });
 
   // Set up recurring aggregation
-  setInterval(() => {
-    console.log(`[${moment().format('YYYY-MM-DD HH:mm:ss')}] Running scheduled news aggregation...`);
-    aggregateAllNews().catch(err => console.error('Scheduled aggregation error:', err));
+  setInterval(async () => {
+    if (isAggregating) return;
+    isAggregating = true;
+    console.log(`[${moment().format('YYYY-MM-DD HH:mm:ss')}] Running scheduled strategic news aggregation...`);
+    try {
+        await aggregateAllNews({ strategicOnly: true });
+    } catch (err) {
+        console.error('Scheduled aggregation error:', err);
+    } finally {
+        isAggregating = false;
+    }
   }, UPDATE_INTERVAL_MS);
 
   // Set up daily cleanup of old news (keep 30 days)

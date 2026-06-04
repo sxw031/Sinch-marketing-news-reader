@@ -75,16 +75,27 @@ async function loadCompanies() {
 
 function getLogoUrl(companyName, type = 'primary') {
     const domain = companyDomains[companyName];
-    if (type === 'primary' && domain) return `https://logo.clearbit.com/${domain}?size=128`;
-    if (type === 'secondary' && domain) return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    if (!domain) return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
+    
+    // Use DDG Icons as primary (more reliable for some Chinese/International brands)
+    if (type === 'primary') return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+    // Clearbit as secondary
+    if (type === 'secondary') return `https://logo.clearbit.com/${domain}?size=128`;
+    // Google as tertiary
+    if (type === 'tertiary') return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(companyName)}&background=f1f5f9&color=6366f1&size=128&bold=true`;
 }
 
 window.handleLogoError = function(img, companyName) {
     const currentSrc = img.src;
     const domain = companyDomains[companyName];
-    if (currentSrc.includes('clearbit.com') && domain) {
+    if (!domain) return;
+
+    if (currentSrc.includes('duckduckgo.com')) {
         img.src = getLogoUrl(companyName, 'secondary');
+    } else if (currentSrc.includes('clearbit.com')) {
+        img.src = getLogoUrl(companyName, 'tertiary');
     } else if (!currentSrc.includes('ui-avatars.com')) {
         img.src = getLogoUrl(companyName, 'fallback');
     }
@@ -466,4 +477,38 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+async function triggerAggregation(isFull = false) {
+    const btn = isFull ? document.getElementById('fetchAllBtn') : document.getElementById('refreshBtn');
+    const originalText = btn ? btn.querySelector('span').textContent : '';
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Processing...';
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/aggregate?full=${isFull}`, { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            // Periodically refresh news list
+            let refreshCount = 0;
+            const interval = setInterval(async () => {
+                await loadNews();
+                refreshCount++;
+                if (refreshCount >= 12) clearInterval(interval);
+            }, 5000);
+        } else {
+            alert('Failed to start aggregation: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error triggering aggregation:', error);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.querySelector('span').textContent = originalText;
+        }
+    }
 }
