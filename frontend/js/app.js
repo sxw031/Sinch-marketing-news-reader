@@ -445,7 +445,22 @@ function setupEventListeners() {
             });
             const data = await response.json();
             if (data.success) {
-                reportContent.innerHTML = `<div style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.8;">${data.report}</div>`;
+                // Professional Markdown-to-HTML rendering
+                let html = data.report
+                    .replace(/^# (.*$)/gim, '<h1 style="font-size: 1.8rem; margin: 2rem 0 1rem; color: var(--primary);">$1</h1>')
+                    .replace(/^## (.*$)/gim, '<h2 style="font-size: 1.4rem; margin: 1.5rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">$1</h2>')
+                    .replace(/^### (.*$)/gim, '<h3 style="font-size: 1.2rem; margin: 1.2rem 0 0.8rem; color: var(--text-main);">$1</h3>')
+                    .replace(/^#### (.*$)/gim, '<h4 style="font-size: 1.1rem; margin: 1rem 0 0.5rem; font-weight: bold;">$1</h4>')
+                    .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 4px solid var(--primary); background: var(--bg-secondary); padding: 1rem; margin: 1rem 0; font-style: italic; border-radius: 0 8px 8px 0;">$1</blockquote>')
+                    .replace(/\*\*\*/g, '<hr style="border: none; border-top: 1px solid var(--border); margin: 2rem 0;">')
+                    .replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*)\*/g, '<em>$1</em>')
+                    .replace(/!\[(.*?)\]\((.*?)\)/g, '<div class="report-img-container" style="margin: 20px 0;"><img src="$2" alt="$1" style="width:100%; border-radius:16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); object-fit: cover; max-height: 300px;"></div>')
+                    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">$1 <i class="fas fa-external-link-alt" style="font-size: 0.8em;"></i></a>')
+                    .replace(/^\* (.*$)/gim, '<li style="margin-bottom: 0.5rem; list-style-type: none;"><i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i> $1</li>')
+                    .replace(/\n/g, '<br>');
+
+                reportContent.innerHTML = `<div class="report-styled-content" style="padding: 1rem;">${html}</div>`;
             } else {
                 reportContent.innerHTML = '<p>Failed to generate strategy. Please try again.</p>';
             }
@@ -625,15 +640,19 @@ function startStatusPolling(btn, originalText) {
             const data = await response.json();
 
             // Also check debug stats for deep diagnosis
-            const debugResponse = await fetch(`/api/debug/stats`);
-            const debugData = await debugResponse.json();
-            if (debugData.success) {
-                console.log('DEBUG STATS:', debugData);
-                // Auto-trigger if empty
-                if (debugData.db.newsCount === 0 && !data.status.inProgress) {
-                    console.warn('Database is empty. Re-triggering sync...');
-                    triggerAggregation(true);
+            try {
+                const debugResponse = await fetch(`/api/debug/stats`);
+                const debugData = await debugResponse.json();
+                if (debugData.success) {
+                    console.log('DEBUG STATS:', debugData);
+                    // Auto-trigger if empty
+                    if (debugData.db.newsCount === 0 && !data.status.inProgress) {
+                        console.warn('Database is empty. Re-triggering sync...');
+                        triggerAggregation(true);
+                    }
                 }
+            } catch (e) {
+                // Ignore debug stats error to not break main flow
             }
             
             if (data.success && data.status.inProgress) {
@@ -644,8 +663,11 @@ function startStatusPolling(btn, originalText) {
                 const count = status.completedCompanies.length;
                 const total = status.totalCompanies || 18;
                 
-                if (syncText) syncText.textContent = `Syncing: ${count}/${total} [${status.currentCompany || '...'}] (${progress}%)`;
-                if (syncProgress) syncProgress.style.width = `${progress}%`;
+                if (syncText) syncText.textContent = `Syncing: ${count}/${total} [${status.currentCompany || '...'}] ${progress}%`;
+                if (syncProgress) {
+                    syncProgress.style.width = `${progress}%`;
+                    syncProgress.setAttribute('aria-valuenow', progress);
+                }
                 
                 // FORCE STREAMING: Load news every 2 seconds during sync
                 // We pass true for isSilent to avoid clearing the list/showing loaders

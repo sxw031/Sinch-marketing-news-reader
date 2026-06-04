@@ -133,13 +133,11 @@ async function getPodcast(req, res) {
     const { getNews } = require('../services/newsAggregator');
     const { OpenAI } = require('openai');
     
-    // 1. Fetch today's news (last 24h)
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const news = await getNews({ startDate: yesterday.toISOString() });
+    // 1. Fetch latest news (no strict time limit to ensure initial experience)
+    const news = await getNews({ limit: 20 });
     
     if (news.length === 0) {
-      return res.status(404).json({ success: false, error: 'No news found in the last 24 hours to summarize.' });
+      return res.status(404).json({ success: false, error: 'No news found to summarize. Please wait for the first sync.' });
     }
 
     // 2. Select top 5 "explosive" news using basic heuristic (or let AI decide)
@@ -152,17 +150,17 @@ async function getPodcast(req, res) {
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "You are a professional financial news anchor. Create a concise, energetic 3-minute podcast script in Chinese based on the provided news. Focus only on the most 'explosive' and strategic updates. Start with a warm welcome and end with a quick wrap-up. Use a natural, conversational tone." },
-        { role: "user", content: `Here are the latest company updates:\n${candidates}` }
+        { role: "system", content: "你是一位资深的财经新闻主播，拥有富有磁性且专业的嗓音。请根据提供的新闻内容，创作一份约3分钟的中文播客脚本。重点分析最具战略意义的商业动态，语言要生动、专业且具有洞察力。脚本应包括开场白、核心新闻深度解读、行业影响分析以及简短的结语。" },
+        { role: "user", content: `以下是最新的公司动态：\n${candidates}` }
       ]
     });
 
     const script = completion.choices[0].message.content;
 
-    // 4. Generate Speech (TTS)
+    // 4. Generate Speech (TTS) - Using 'onyx' for a more professional, deep anchor voice
     const mp3 = await client.audio.speech.create({
-      model: "tts-1",
-      voice: "alloy",
+      model: "tts-1-hd", // High definition for better quality
+      voice: "onyx",
       input: script,
     });
 
