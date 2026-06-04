@@ -4,7 +4,7 @@ const COMPANIES = [
     name: 'HSBC',
     domain: 'hsbc.com',
     category: 'Finance',
-    logoUrl: 'https://www.hsbc.com/assets/img/hsbc-logo.svg',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=hsbc.com&sz=128',
     website: {
       url: 'https://www.hsbc.com/news-and-media/media-releases',
       selectors: {
@@ -21,7 +21,7 @@ const COMPANIES = [
     name: 'Grab',
     domain: 'grab.com',
     category: 'Technology',
-    logoUrl: 'https://assets.grab.com/wp-content/uploads/sites/4/2021/04/15151635/grab-logo.png',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=grab.com&sz=128',
     website: {
       url: 'https://www.grab.com/sg/press/',
       selectors: {
@@ -38,7 +38,7 @@ const COMPANIES = [
     name: 'Vodafone',
     domain: 'vodafone.com',
     category: 'Technology',
-    logoUrl: 'https://www.vodafone.com/etc.clientlibs/vodafone/clientlibs/clientlib-site/resources/images/vodafone-logo.svg',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=vodafone.com&sz=128',
     website: {
       url: 'https://www.vodafone.com/news',
       selectors: {
@@ -55,7 +55,7 @@ const COMPANIES = [
     name: 'Cathay Pacific',
     domain: 'cathaypacific.com',
     category: 'Aviation',
-    logoUrl: 'https://www.cathaypacific.com/content/dam/focal-point/digital-library/global/brand-assets/logo/cathay-pacific-logo-green-en.svg',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=cathaypacific.com&sz=128',
     website: {
       url: 'https://news.cathaypacific.com/',
       selectors: {
@@ -72,7 +72,7 @@ const COMPANIES = [
     name: 'Alibaba',
     domain: 'alibaba.com',
     category: 'Marketing',
-    logoUrl: 'https://s.alicdn.com/@sc02/kf/H98363721666d48299837965905187768j.png',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=alibaba.com&sz=128',
     website: {
       url: 'https://www.alizila.com/',
       selectors: {
@@ -89,6 +89,7 @@ const COMPANIES = [
     name: 'Standard Chartered',
     domain: 'sc.com',
     category: 'Finance',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=sc.com&sz=128',
     website: {
       url: 'https://www.sc.com/en/media/',
       selectors: {
@@ -105,6 +106,7 @@ const COMPANIES = [
     name: 'Temu',
     domain: 'temu.com',
     category: 'Marketing',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=temu.com&sz=128',
     website: {
       url: 'https://www.temu.com/news.html',
       selectors: {
@@ -121,6 +123,7 @@ const COMPANIES = [
     name: 'Ctrip',
     domain: 'trip.com',
     category: 'General',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=trip.com&sz=128',
     website: {
       url: 'https://ir.trip.com/news-releases',
       selectors: {
@@ -137,6 +140,7 @@ const COMPANIES = [
     name: 'Didi',
     domain: 'didiglobal.com',
     category: 'Technology',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=didiglobal.com&sz=128',
     website: {
       url: 'https://www.didiglobal.com/news',
       selectors: {
@@ -153,6 +157,7 @@ const COMPANIES = [
     name: 'DBS',
     domain: 'dbs.com',
     category: 'Finance',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=dbs.com&sz=128',
     website: {
       url: 'https://www.dbs.com/newsroom/default.page',
       selectors: {
@@ -169,7 +174,7 @@ const COMPANIES = [
     name: 'Tencent',
     domain: 'tencent.com',
     category: 'Technology',
-    logoUrl: 'https://www.tencent.com/img/index/menu-logo-en.png',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=tencent.com&sz=128',
     website: {
       url: 'https://www.tencent.com/en-us/media.html',
       selectors: {
@@ -186,7 +191,7 @@ const COMPANIES = [
     name: 'Bank of China',
     domain: 'boc.cn',
     category: 'Finance',
-    logoUrl: 'https://www.boc.cn/apple-touch-icon.png',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=boc.cn&sz=128',
     website: {
       url: 'https://www.boc.cn/en/aboutboc/ab1/index.html',
       selectors: {
@@ -203,7 +208,7 @@ const COMPANIES = [
     name: 'ByteDance',
     domain: 'bytedance.com',
     category: 'Technology',
-    logoUrl: 'https://sf16-scmcdn-sg.ibytedtos.com/obj/eden-sg/uvshz_lj_lp/ljhwz_lp/bytedance_logo_english.png',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=bytedance.com&sz=128',
     website: {
       url: 'https://www.bytedance.com/en/news',
       selectors: {
@@ -220,6 +225,7 @@ const COMPANIES = [
     name: 'Gojek',
     domain: 'gojek.com',
     category: 'Technology',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=gojek.com&sz=128',
     website: {
       url: 'https://www.gojek.com/en-id/news/',
       selectors: {
@@ -236,6 +242,7 @@ const COMPANIES = [
     name: 'Citigroup',
     domain: 'citigroup.com',
     category: 'Finance',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=citigroup.com&sz=128',
     website: {
       url: 'https://www.citigroup.com/global/news/press-releases',
       selectors: {
@@ -252,6 +259,7 @@ const COMPANIES = [
     name: 'Binance',
     domain: 'binance.com',
     category: 'Finance',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=binance.com&sz=128',
     website: {
       url: 'https://www.binance.com/en/blog/news',
       selectors: {
@@ -268,6 +276,7 @@ const COMPANIES = [
     name: 'ShopBack',
     domain: 'shopback.com',
     category: 'Marketing',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=shopback.com&sz=128',
     website: {
       url: 'https://corporate.shopback.com/news',
       selectors: {
@@ -284,6 +293,7 @@ const COMPANIES = [
     name: 'Aeon Credit',
     domain: 'aeoncredit.com.my',
     category: 'Finance',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=aeoncredit.com.my&sz=128',
     website: {
       url: 'https://www.aeoncredit.com.my/news-announcements',
       selectors: {

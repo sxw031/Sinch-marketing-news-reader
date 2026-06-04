@@ -10,11 +10,12 @@ function classifyArticle(title, description) {
   const content = (title + ' ' + (description || '')).toLowerCase();
   
   // 1. CSM Strategic Insights (Highest Priority)
-  const csmKeywords = [
+    const csmKeywords = [
     'partnership', 'collaboration', 'expand', 'growth', 'acquisition', 'merger', 
     'ceo', 'executive', 'leadership', 'revenue', 'profit', 'earnings', 'quarterly', 
     'strategy', 'invest', 'funding', 'outage', 'downtime', 'issue', 'customer', 
-    'launch', 'new market', 'hiring', 'layoff', 'rebrand'
+    'launch', 'new market', 'hiring', 'layoff', 'rebrand', 'announcement', 'service',
+    'solution', 'digital', 'transformation', 'agreement', 'contract', 'deal'
   ];
   if (csmKeywords.some(kw => content.includes(kw))) {
     return 'Strategic Insights';
@@ -56,11 +57,16 @@ async function fetchNewsForCompany(company) {
   try {
     console.log(`Fetching Premium Sources (Official & LinkedIn) for ${company}...`);
     const premiumNews = await searchAllPremiumSources(company, { 
-        limit: 15, // Increased limit
+        limit: 20, // Increased limit for better coverage
         domain: companyConfig.domain,
         website: companyConfig.website
     });
-    allNews = allNews.concat(premiumNews);
+    if (premiumNews && premiumNews.length > 0) {
+        allNews = allNews.concat(premiumNews);
+        console.log(`✓ [${company}] Found ${premiumNews.length} premium articles`);
+    } else {
+        console.log(`⚠ [${company}] No premium articles found, will rely on web search`);
+    }
   } catch (error) {
     console.error(`Error fetching Premium Sources for ${company}:`, error.message);
   }
