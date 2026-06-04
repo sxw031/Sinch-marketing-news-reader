@@ -51,10 +51,21 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
   try {
     console.log(`Searching ${sourceName} for ${company} news...`);
 
-    const queries = site ? [
-      `site:${site} "${company}"`,
-      `"${company}" ${site} latest news`
-    ] : [`"${company}" latest news`];
+    let queries = [];
+    if (site === 'linkedin.com') {
+      queries = [
+        `site:linkedin.com/company "${company}" "posts"`,
+        `site:linkedin.com/posts "${company}"`,
+        `"${company}" LinkedIn latest updates`
+      ];
+    } else if (site) {
+      queries = [
+        `site:${site} "${company}"`,
+        `"${company}" ${site} latest news`
+      ];
+    } else {
+      queries = [`"${company}" latest news`];
+    }
 
     let articles = [];
     
@@ -93,7 +104,11 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
             if (!articles.some(a => a.url === link)) {
               // Extract a better source name if it's general web search
               let finalSource = sourceName;
-              if (sourceName === 'Web Search') {
+              
+              // Force "LinkedIn" source name for any linkedin.com results
+              if (link.toLowerCase().includes('linkedin.com')) {
+                finalSource = 'LinkedIn';
+              } else if (sourceName === 'Web Search') {
                 try {
                   const urlObj = new URL(link);
                   const hostname = urlObj.hostname.replace('www.', '');

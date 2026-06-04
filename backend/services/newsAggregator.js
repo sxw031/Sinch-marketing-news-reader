@@ -56,7 +56,7 @@ async function fetchNewsForCompany(company) {
   try {
     console.log(`Fetching Premium Sources (Official & LinkedIn) for ${company}...`);
     const premiumNews = await searchAllPremiumSources(company, { 
-        limit: 10,
+        limit: 15, // Increased limit
         domain: companyConfig.domain,
         website: companyConfig.website
     });
@@ -68,19 +68,28 @@ async function fetchNewsForCompany(company) {
   // 2. Web search (DuckDuckGo & Bing)
   try {
     console.log(`Web searching (Bing/DDG) for ${company}...`);
-    const ddgNews = await searchDuckDuckGo(company, { limit: 15 });
-    allNews = allNews.concat(ddgNews);
+    // Parallelize search for better coverage but with slight delay to be polite
+    const [ddgNews, bingNews] = await Promise.all([
+      searchDuckDuckGo(company, { limit: 15 }),
+      (async () => {
+        await sleep(2000);
+        return searchBingNews(company, { limit: 15 });
+      })()
+    ]);
     
-    // Add small delay to avoid rate limiting
-    await sleep(1000);
-    
-    const bingNews = await searchBingNews(company, { limit: 15 });
-    allNews = allNews.concat(bingNews);
+    allNews = allNews.concat(ddgNews || []);
+    allNews = allNews.concat(bingNews || []);
   } catch (error) {
     console.error(`Error web searching for ${company}:`, error.message);
   }
 
-  return allNews;
+  // Final deduplication by URL
+  const seenUrls = new Set();
+  return allNews.filter(article => {
+    if (seenUrls.has(article.url)) return false;
+    seenUrls.add(article.url);
+    return true;
+  });
 }
 
 async function aggregateAllNews() {
