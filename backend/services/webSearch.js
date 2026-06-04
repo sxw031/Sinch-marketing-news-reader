@@ -54,18 +54,22 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
 
     let queries = [];
     if (site === 'linkedin.com') {
-      // Precise LinkedIn targeting to avoid generic profile results
+      // Precise LinkedIn targeting with history support
       queries = [
         `site:linkedin.com/posts "${company}"`,
         `site:linkedin.com/company "${company}" updates`,
-        `"${company}" intitle:LinkedIn`
+        `"${company}" LinkedIn insights`
       ];
     } else if (site) {
       queries = [
-        `site:${site} "${company}"`
+        `site:${site} "${company}"`,
+        `site:${site} "${company}" news after:2020-01-01`
       ];
     } else {
-      queries = [`"${company}" latest news`];
+      queries = [
+        `"${company}" strategic news after:2020-01-01`,
+        `"${company}" latest news`
+      ];
     }
 
     let articles = [];
@@ -133,14 +137,22 @@ async function searchSiteNews(company, site, sourceName, options = {}) {
                 else if (unit.includes('month')) date.setMonth(date.getMonth() - amount);
                 publishedAt = date.toISOString().replace('Z', '');
               } else {
-                // Try to find date patterns like "May 20, 2024" or "2024-05-20"
-                const dateMatch = description.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i) || 
-                                 description.match(/\d{4}-\d{2}-\d{2}/);
-                if (dateMatch) {
-                  const parsedDate = new Date(dateMatch[0]);
-                  if (!isNaN(parsedDate.getTime())) {
-                    publishedAt = parsedDate.toISOString().replace('Z', '');
-                  }
+                // Enhanced pattern for historical dates (2020-present)
+                const datePatterns = [
+                    /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i,
+                    /\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/i,
+                    /\d{4}-\d{2}-\d{2}/
+                ];
+                
+                for (const pattern of datePatterns) {
+                    const match = description.match(pattern);
+                    if (match) {
+                        const parsedDate = new Date(match[0]);
+                        if (!isNaN(parsedDate.getTime())) {
+                            publishedAt = parsedDate.toISOString().replace('Z', '');
+                            break;
+                        }
+                    }
                 }
               }
 

@@ -320,6 +320,7 @@ function setupEventListeners() {
                 case '48h': start.setHours(now.getHours() - 48); break;
                 case '1w': start.setDate(now.getDate() - 7); break;
                 case '1m': start.setMonth(now.getMonth() - 1); break;
+                case '2020': start = new Date('2020-01-01T00:00:00Z'); break;
             }
             
             // Set global activeTimeRange so it persists through Apply Filters
@@ -585,7 +586,7 @@ function startStatusPolling(btn, originalText) {
                 if (syncText) syncText.textContent = `Syncing: ${status.currentCompany || 'Initializing...'} (${progress}%)`;
                 if (syncProgress) syncProgress.style.width = `${progress}%`;
                 
-                // Silent background update
+                // STREAMING UPDATE: Immediately show new news as they are fetched
                 await loadNews(false, true);
             } else {
                 clearInterval(statusPollingInterval);
