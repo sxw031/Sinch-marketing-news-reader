@@ -136,7 +136,7 @@ async function storeNews(articles, company) {
             article.source,
             article.imageUrl || '',
             article.category || 'General',
-            article.publishedAt || new Date().toISOString(),
+            article.publishedAt ? new Date(article.publishedAt).toISOString() : new Date().toISOString(),
             article.author || 'Unknown'
           ]
         );

@@ -256,6 +256,20 @@ function setupEventListeners() {
     document.getElementById('applyFiltersBtn').addEventListener('click', () => loadNews());
     document.getElementById('searchInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') loadNews(); });
 
+    // Logo click to reset everything and show all
+    document.querySelector('.logo').addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedCompanies = [];
+        activeTimeRange = null;
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('sourceFilter').value = '';
+        document.getElementById('searchInput').value = '';
+        document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
+        localStorage.removeItem(SELECTED_COMPANIES_KEY);
+        renderCompanyGrid();
+        loadNews();
+    });
+
     document.querySelectorAll('.btn-quick-time').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));

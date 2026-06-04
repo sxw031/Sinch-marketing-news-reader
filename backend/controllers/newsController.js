@@ -1,9 +1,12 @@
 const { getNews, getAvailableCompanies, aggregateAllNews } = require('../services/newsAggregator');
 async function getAllNews(req, res) {
   try {
+    console.log('--- GET NEWS REQUEST ---');
+    console.log('Query Params:', JSON.stringify(req.query));
+
     const filters = { 
       company: req.query.company, 
-      companies: req.query.companies ? req.query.companies.split(',') : undefined, 
+      companies: req.query.companies ? req.query.companies.split(',').filter(c => c.trim()) : undefined, 
       startDate: req.query.startDate, 
       endDate: req.query.endDate, 
       category: req.query.category, 
@@ -11,7 +14,15 @@ async function getAllNews(req, res) {
       search: req.query.search, 
       limit: req.query.limit ? parseInt(req.query.limit) : 100 
     };
+
+    // If companies is an empty array after filtering, set to undefined to show all
+    if (filters.companies && filters.companies.length === 0) {
+      filters.companies = undefined;
+    }
+
+    console.log('Applied Filters:', JSON.stringify(filters));
     const news = await getNews(filters);
+    console.log(`Returning ${news.length} articles`);
     res.json({ success: true, count: news.length, data: news });
   } catch (error) {
     console.error('Error getting news:', error);
