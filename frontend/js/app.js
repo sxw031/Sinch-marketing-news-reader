@@ -468,13 +468,47 @@ function updateStats(count) {
 }
 
 function formatDate(dateString) {
-    if (!dateString) return 'Recent';
+    if (!dateString) return 'Just now';
+    
+    // Ensure we handle various date formats correctly
     const date = new Date(dateString);
+    
+    // If invalid date, return a fallback
+    if (isNaN(date.getTime())) return 'Recently';
+    
     const now = new Date();
     const diff = now - date;
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Future dates (sometimes happens due to timezone shifts)
+    if (diff < 0) return 'Just now';
+    
+    // Less than 1 minute
+    if (diff < 60000) return 'Just now';
+    
+    // Less than 1 hour
+    if (diff < 3600000) {
+        const mins = Math.floor(diff / 60000);
+        return `${mins}m ago`;
+    }
+    
+    // Less than 24 hours
+    if (diff < 86400000) {
+        const hours = Math.floor(diff / 3600000);
+        return `${hours}h ago`;
+    }
+    
+    // Less than 7 days
+    if (diff < 604800000) {
+        const days = Math.floor(diff / 86400000);
+        return `${days}d ago`;
+    }
+    
+    // Default to date string
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
 }
 
 function escapeHtml(text) {

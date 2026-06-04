@@ -104,8 +104,8 @@ async function aggregateAllNews(options = {}) {
   console.log(`Starting ${isStrategicOnly ? 'Strategic' : 'Full'} news aggregation...`);
   const startTime = new Date();
   
-  // For Render Free Tier, we use smaller batch or sequential to avoid OOM
-  const BATCH_SIZE = 1; 
+  // Optimized for Render Free: 2 concurrent companies for better speed without crashing
+  const BATCH_SIZE = 2; 
   for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
     const batch = COMPANIES.slice(i, i + BATCH_SIZE);
     
@@ -137,8 +137,8 @@ async function aggregateAllNews(options = {}) {
     }));
     
     if (i + BATCH_SIZE < COMPANIES.length) {
-      // Shorter delay for better responsiveness, but still being polite
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Faster batch processing delay
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
   
