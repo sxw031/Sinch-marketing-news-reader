@@ -1,12 +1,12 @@
 /**
- * Heuristic Strategy Engine
- * Generates strategic plans without requiring an AI API Key
- * Based on keyword analysis and CSM templates
+ * Heuristic Strategy Engine v2
+ * Generates beautifully formatted strategic plans without requiring an AI API Key
  */
 
 const STRATEGY_TEMPLATES = {
     EXPANSION: {
-        title: "Market Expansion & Growth Strategy",
+        title: "🚀 Market Expansion & Growth Strategy",
+        emoji: "🌐",
         points: [
             "Leverage Sinch's global messaging footprint to support their new market entry.",
             "Offer localized number provisioning and compliance consulting in the new regions.",
@@ -14,7 +14,8 @@ const STRATEGY_TEMPLATES = {
         ]
     },
     PARTNERSHIP: {
-        title: "Ecosystem & Partnership Integration",
+        title: "🤝 Ecosystem & Partnership Integration",
+        emoji: "🔗",
         points: [
             "Identify cross-platform integration opportunities between Sinch and their new partners.",
             "Develop co-marketing materials highlighting the combined value proposition.",
@@ -22,7 +23,8 @@ const STRATEGY_TEMPLATES = {
         ]
     },
     FINANCIAL: {
-        title: "Revenue Optimization & Financial Stability",
+        title: "💰 Revenue Optimization & Financial Stability",
+        emoji: "📈",
         points: [
             "Analyze their current messaging volume to propose more cost-effective committed-use tiers.",
             "Introduce fraud prevention tools (Sinch Verification) to protect their growing transaction volume.",
@@ -30,7 +32,8 @@ const STRATEGY_TEMPLATES = {
         ]
     },
     TECHNOLOGY: {
-        title: "Digital Transformation & Tech Innovation",
+        title: "💻 Digital Transformation & Tech Innovation",
+        emoji: "✨",
         points: [
             "Pitch Sinch's AI-powered conversational platform to modernize their customer support.",
             "Demonstrate how Sinch's rich messaging (RCS/WhatsApp) can improve their mobile engagement rates.",
@@ -38,7 +41,8 @@ const STRATEGY_TEMPLATES = {
         ]
     },
     ISSUE: {
-        title: "Risk Mitigation & Service Recovery",
+        title: "⚠️ Risk Mitigation & Service Recovery",
+        emoji: "🛡️",
         points: [
             "Propose Sinch's redundant routing capabilities to ensure 99.99% uptime for their critical services.",
             "Set up automated monitoring and alerting for their API traffic to preempt future issues.",
@@ -46,7 +50,8 @@ const STRATEGY_TEMPLATES = {
         ]
     },
     GENERAL: {
-        title: "Strategic Account Management",
+        title: "🎯 Strategic Account Management",
+        emoji: "📋",
         points: [
             "Schedule a quarterly business review (QBR) to align Sinch's roadmap with their 2024 goals.",
             "Identify key stakeholders in their newly formed departments for relationship building.",
@@ -65,7 +70,7 @@ const KEYWORD_MAP = {
 
 function generateHeuristicReport(newsArticles) {
     if (!newsArticles || newsArticles.length === 0) {
-        return "### Sinch Strategic Analysis Report\n\nNo recent strategic news found to analyze. Please try a broader time range or select more companies.";
+        return "### 📭 Sinch Strategic Analysis Report\n\nNo recent strategic news found to analyze. Please try a broader time range or select more companies.";
     }
 
     const analysisMap = new Map();
@@ -89,33 +94,39 @@ function generateHeuristicReport(newsArticles) {
         }
     });
 
-    let report = `# SINCH STRATEGIC ANALYSIS & ACTION PLAN\n`;
-    report += `Generated on: ${new Date().toLocaleDateString()}\n`;
-    report += `Analysis based on ${newsArticles.length} recent insights across ${companyNames.length} companies.\n\n`;
+    let report = `==========================================\n`;
+    report += `📊 SINCH STRATEGIC ANALYSIS & ACTION PLAN\n`;
+    report += `==========================================\n\n`;
+    report += `📅 Date: ${new Date().toLocaleDateString()}\n`;
+    report += `🔍 Scope: ${newsArticles.length} insights | ${companyNames.length} companies\n\n`;
 
-    report += `## 1. EXECUTIVE SUMMARY\n`;
-    report += `Based on recent developments, your portfolio shows high activity in ${[...analysisMap.keys()].join(', ')}. `;
-    report += `Sinch has a unique opportunity to position itself as a core infrastructure partner during these transitions.\n\n`;
+    report += `## 1️⃣ EXECUTIVE SUMMARY\n`;
+    report += `------------------------------------------\n`;
+    report += `Our recent market intelligence indicates high activity in sectors related to ${[...analysisMap.keys()].join(', ')}. `;
+    report += `For Sinch, this represents a critical window to deepen integration and provide infrastructure stability during these corporate transitions.\n\n`;
 
-    report += `## 2. STRATEGIC OPPORTUNITIES BY SEGMENT\n\n`;
+    report += `## 2️⃣ STRATEGIC OPPORTUNITIES\n`;
+    report += `------------------------------------------\n\n`;
 
     for (const [type, articles] of analysisMap.entries()) {
         const template = STRATEGY_TEMPLATES[type] || STRATEGY_TEMPLATES.GENERAL;
-        report += `### ${template.title}\n`;
-        report += `**Context:** Analyzing ${articles.length} updates from ${[...new Set(articles.map(a => a.company))].join(', ')}.\n`;
-        report += `**Recommended Actions for Sinch:**\n`;
+        report += `${template.title}\n`;
+        report += `Context: ${articles.length} updates from ${[...new Set(articles.map(a => a.company))].join(', ')}\n\n`;
+        report += `Actionable Plan for Sinch:\n`;
         template.points.forEach(point => {
-            report += `- ${point}\n`;
+            report += `  • ${point}\n`;
         });
         report += `\n`;
     }
 
-    report += `## 3. KEY NEWS REFERENCES\n`;
+    report += `## 3️⃣ KEY INSIGHT REFERENCES\n`;
+    report += `------------------------------------------\n`;
     newsArticles.slice(0, 10).forEach(a => {
-        report += `- [${a.company}] ${a.title} (${new Date(a.publishedAt).toLocaleDateString()})\n`;
+        report += `📍 [${a.company}] ${a.title}\n`;
+        report += `   Date: ${new Date(a.publishedAt).toLocaleDateString()}\n\n`;
     });
 
-    report += `\n---\n*Note: This report was generated using MarketFeed's Heuristic Strategy Engine.*`;
+    report += `\n---\n*Generated by MarketFeed Heuristic Engine v2.0*`;
 
     return report;
 }

@@ -79,33 +79,41 @@ async function fetchNewsForCompany(company) {
 }
 
 async function aggregateAllNews() {
-  console.log('Starting news aggregation with premium sources...');
+  console.log('Starting comprehensive news aggregation...');
   const startTime = new Date();
   
-  for (const company of COMPANIES) {
-    try {
-      console.log(`\n=== Fetching news for ${company.name} ===`);
-      const news = await fetchNewsForCompany(company.name);
-      if (news.length > 0) {
-        const classifiedNews = news.map(article => ({
-          ...article,
-          category: classifyArticle(article.title, article.description)
-        }));
-        await storeNews(classifiedNews, company.name);
-        console.log(`✓ Stored ${news.length} articles for ${company.name}`);
-      } else {
-        console.log(`⚠ No articles found for ${company.name}`);
+  // Use a smaller batch size to avoid overwhelming the network but still process faster than serial
+  const BATCH_SIZE = 2; 
+  for (let i = 0; i < COMPANIES.length; i += BATCH_SIZE) {
+    const batch = COMPANIES.slice(i, i + BATCH_SIZE);
+    console.log(`\n--- Processing Batch ${Math.floor(i/BATCH_SIZE) + 1} (${batch.map(c => c.name).join(', ')}) ---`);
+    
+    await Promise.all(batch.map(async (company) => {
+      try {
+        const news = await fetchNewsForCompany(company.name);
+        if (news.length > 0) {
+          const classifiedNews = news.map(article => ({
+            ...article,
+            category: classifyArticle(article.title, article.description)
+          }));
+          await storeNews(classifiedNews, company.name);
+          console.log(`✓ [${company.name}] Stored ${news.length} articles`);
+        } else {
+          console.log(`⚠ [${company.name}] No articles found`);
+        }
+      } catch (error) {
+        console.error(`❌ [${company.name}] Aggregation failed:`, error.message);
       }
-      
-      // Small delay between companies to be polite to sources
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error(`Error aggregating news for ${company.name}:`, error.message);
+    }));
+    
+    // Polite delay between batches
+    if (i + BATCH_SIZE < COMPANIES.length) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
   
   const duration = new Date() - startTime;
-  console.log(`\n✓ Aggregation completed in ${duration}ms`);
+  console.log(`\n✅ Aggregation completed in ${Math.round(duration/1000)}s`);
 }
 
 async function storeNews(articles, company) {
@@ -157,9 +165,12 @@ async function getNews(filters = {}) {
     params.push(filters.company);
   }
   
-  if (filters.companies && Array.isArray(filters.companies) && filters.companies.length > 0) {
-    sql += ` AND company IN (${filters.companies.map(() => '?').join(',')})`;
-    params.push(...filters.companies);
+  if (filters.companies) {
+    const companyList = Array.isArray(filters.companies) ? filters.companies : filters.companies.split(',');
+    if (companyList.length > 0) {
+      sql += ` AND company IN (${companyList.map(() => '?').join(',')})`;
+      params.push(...companyList);
+    }
   }
   
   if (filters.startDate) {

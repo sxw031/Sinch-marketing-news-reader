@@ -3,6 +3,7 @@ const SELECTED_COMPANIES_KEY = 'selectedCompanies';
 let allNews = [];
 let availableCompanies = [];
 let selectedCompanies = [];
+let activeTimeRange = null;
 
 // Company to Domain mapping for Logo APIs
 const companyDomains = {
@@ -113,7 +114,7 @@ function updateSelectionLabel() {
     else label.textContent = `${count} Companies`;
 }
 
-async function loadNews(isExplicitRefresh = false, startDate = null) {
+async function loadNews(isExplicitRefresh = false) {
     showLoading(true);
     try {
         const category = document.getElementById('categoryFilter').value;
@@ -122,18 +123,26 @@ async function loadNews(isExplicitRefresh = false, startDate = null) {
         
         if (isExplicitRefresh) {
             await fetch(`${API_BASE}/aggregate`, { method: 'POST' });
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Small delay to allow some new items to be found
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         let url = `${API_BASE}?limit=1000`;
-        if (startDate) url += `&startDate=${startDate}`;
+        
+        // Use activeTimeRange if set by quick filters
+        if (activeTimeRange) {
+            url += `&startDate=${activeTimeRange}`;
+        }
+        
         if (category) url += `&category=${encodeURIComponent(category)}`;
         if (source) url += `&source=${encodeURIComponent(source)}`;
         if (selectedCompanies.length > 0) url += `&companies=${selectedCompanies.join(',')}`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
+        console.log('Fetching news with URL:', url);
         const response = await fetch(url);
         const data = await response.json();
+        
         if (data.success) {
             allNews = data.data || [];
             renderNews();
@@ -144,11 +153,6 @@ async function loadNews(isExplicitRefresh = false, startDate = null) {
     } finally {
         showLoading(false);
     }
-}
-
-async function loadNewsWithTimeRange(startDate) {
-    // We pass the explicit ISO string to the backend
-    await loadNews(false, startDate);
 }
 
 function renderNews() {
@@ -268,9 +272,9 @@ function setupEventListeners() {
                 case '1m': start.setMonth(now.getMonth() - 1); break;
             }
             
-            // Re-fetch with explicit start date to ensure we get news from the source's timeline
-            const startDateStr = start.toISOString();
-            loadNewsWithTimeRange(startDateStr);
+            // Set global activeTimeRange so it persists through Apply Filters
+            activeTimeRange = start.toISOString();
+            loadNews();
         });
     });
 
@@ -280,6 +284,7 @@ function setupEventListeners() {
         document.getElementById('searchInput').value = '';
         document.querySelectorAll('.btn-quick-time').forEach(b => b.classList.remove('active'));
         selectedCompanies = [];
+        activeTimeRange = null; // Clear time range on reset
         localStorage.removeItem(SELECTED_COMPANIES_KEY);
         renderCompanyGrid();
         loadNews();
