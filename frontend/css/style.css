@@ -143,7 +143,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(
 
 /* Modals */
 .modal { display: none; position: fixed; z-index: 2000; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow-y: auto; }
-.modal-content { background: var(--bg-card); max-width: 800px; margin: 3vh auto; border-radius: 24px; padding: 2rem; position: relative; max-height: 94vh; overflow-y: auto; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.2); }
+.modal-content { background: var(--bg-card); max-width: 860px; margin: 2vh auto; border-radius: 24px; padding: 2.5rem 3rem; position: relative; max-height: 96vh; overflow-y: auto; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.2); scroll-behavior: smooth; }
 .modal-header { margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { font-weight: 800; letter-spacing: -0.02em; font-size: 1.3rem; }
 .close { font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: color 0.2s; line-height: 1; }
@@ -164,19 +164,34 @@ body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(
 .sync-progress-mini { flex: 1; height: 5px; background: var(--bg-body); border-radius: 3px; overflow: hidden; max-width: 250px; }
 .sync-progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #8b5cf6); transition: width 0.5s ease; border-radius: 3px; }
 
-/* Report Styles */
-.report-body { line-height: 1.7; font-size: 0.9rem; }
-.report-body h1, .report-h1 { font-size: 1.4rem; font-weight: 800; color: var(--primary); margin: 1.25rem 0 0.6rem; }
-.report-body h2, .report-h2 { font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin: 1rem 0 0.5rem; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem; }
-.report-body h3, .report-h3 { font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0.8rem 0 0.3rem; }
-.report-body blockquote, .report-quote { border-left: 3px solid var(--primary); background: var(--bg-secondary); padding: 0.6rem 0.8rem; margin: 0.6rem 0; border-radius: 0 8px 8px 0; font-style: italic; font-size: 0.85rem; }
-.report-body hr, .report-divider { border: none; border-top: 2px solid var(--border); margin: 1.25rem 0; }
-.report-body li { margin-bottom: 0.3rem; padding-left: 0.5rem; list-style-position: inside; font-size: 0.88rem; }
-.report-body strong { color: var(--text-main); }
+/* Report Styles - Professional Layout */
+.report-body { line-height: 1.75; font-size: 0.92rem; color: var(--text-main); padding: 0.5rem 0; }
+.report-body h1, .report-h1 { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin: 0 0 0.75rem; letter-spacing: -0.02em; }
+.report-body h2, .report-h2 { font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin: 1.5rem 0 0.75rem; padding: 0.6rem 0.9rem; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); border-left: 4px solid var(--primary); border-radius: 0 10px 10px 0; }
+[data-theme="dark"] .report-body h2 { background: linear-gradient(135deg, #1e293b 0%, #1e1b4b 100%); }
+.report-body h3, .report-h3 { font-size: 0.98rem; font-weight: 700; color: var(--primary); margin: 1rem 0 0.4rem; padding-bottom: 0.2rem; }
+.report-body p { margin: 0.4rem 0 0.6rem; }
+.report-body blockquote, .report-quote { border-left: 3px solid var(--primary); background: var(--bg-secondary); padding: 0.7rem 1rem; margin: 0.6rem 0; border-radius: 0 10px 10px 0; font-style: italic; font-size: 0.85rem; line-height: 1.6; }
+.report-body hr, .report-divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.report-body ul, .report-body ol { margin: 0.4rem 0 0.6rem 1.2rem; padding: 0; }
+.report-body li { margin-bottom: 0.35rem; padding-left: 0.3rem; font-size: 0.88rem; line-height: 1.6; }
+.report-body strong { color: var(--text-main); font-weight: 700; }
 .report-body img, .report-img { width: 100%; border-radius: 10px; margin: 0.8rem 0; box-shadow: var(--shadow); max-height: 200px; object-fit: cover; }
 .report-body a, .report-link { color: var(--primary); text-decoration: none; font-weight: 600; }
 .report-body a:hover, .report-link:hover { text-decoration: underline; }
-.report-loading { text-align: center; padding: 3rem 2rem; }
+.report-body table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0.75rem 0; font-size: 0.84rem; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.report-body th { background: var(--bg-secondary); font-weight: 700; text-align: left; padding: 0.6rem 0.75rem; border-bottom: 2px solid var(--border); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+.report-body td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.report-body tr:last-child td { border-bottom: none; }
+.report-body tr:hover td { background: rgba(99, 102, 241, 0.03); }
+.report-loading { text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px; }
+
+/* Report Modal Layout */
+.report-modal { max-width: 900px; padding: 2rem 2.5rem; }
+.report-modal .modal-header { position: sticky; top: -2rem; background: var(--bg-card); padding: 0.75rem 0 1rem; margin: -0.5rem 0 0.5rem; z-index: 10; border-bottom: 1px solid var(--border); }
+.report-header-actions { display: flex; align-items: center; gap: 0.5rem; }
+.report-header-actions .btn-icon-text { padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.85rem; }
+.report-content { padding: 0.75rem 0 0; max-width: 100%; }
 
 /* Action Items in Report */
 .action-item { background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%); border: 1px solid #ddd6fe; border-radius: 10px; padding: 0.75rem 1rem; margin: 0.5rem 0; display: flex; align-items: flex-start; gap: 0.6rem; }

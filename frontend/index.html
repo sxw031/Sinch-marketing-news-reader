@@ -253,24 +253,24 @@
 
     <!-- Strategy Report Modal -->
     <div id="reportModal" class="modal">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content report-modal">
             <div class="modal-header">
                 <h2><i class="fas fa-file-contract"></i> Strategic Analysis</h2>
-                <span class="close" id="closeReportModal">&times;</span>
+                <div class="report-header-actions">
+                    <button id="listenReportBtn" class="btn-icon-text btn-podcast" title="Listen to report">
+                        <i class="fas fa-headphones"></i>
+                    </button>
+                    <button id="downloadReportBtn" class="btn-icon-text btn-refresh" title="Download report">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <span class="close" id="closeReportModal">&times;</span>
+                </div>
             </div>
-            <div id="reportContent" class="report-content" style="padding: 1rem 0;">
-                <div class="report-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
+            <div id="reportContent" class="report-content">
+                <div class="report-loading">
                     <div class="spinner"></div>
                     <p>Generating strategic analysis...</p>
                 </div>
-            </div>
-            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap;">
-                <button id="listenReportBtn" class="btn-icon-text btn-podcast">
-                    <i class="fas fa-headphones"></i> <span>Listen</span>
-                </button>
-                <button id="downloadReportBtn" class="btn-icon-text btn-refresh">
-                    <i class="fas fa-download"></i> <span>Download</span>
-                </button>
             </div>
         </div>
     </div>

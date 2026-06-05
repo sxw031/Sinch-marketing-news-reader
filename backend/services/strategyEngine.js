@@ -474,12 +474,13 @@ function generateTrendAnalysis(newsArticles, period) {
 }
 
 // =====================================================
-// MAIN REPORT GENERATOR (Rubric-Aligned)
+// MAIN REPORT GENERATOR (Rubric-Aligned, Concise)
 // =====================================================
 
 /**
  * Generate rubric-aligned strategy report
- * Structured around 5 dimensions for maximum CSM impact
+ * Target: 7-8 minute read (~1600-2000 words)
+ * Flow: Context → Trends → Use Cases → Stakeholders → Story → Differentiation → Actions
  */
 function generateHeuristicReport(newsArticles, period = 'daily') {
   if (!newsArticles || newsArticles.length === 0) {
@@ -507,228 +508,184 @@ function generateHeuristicReport(newsArticles, period = 'daily') {
   // Use case matching
   const useCaseMatches = matchUseCases(newsArticles);
 
-  // ===== REPORT HEADER =====
-  let report = `# 📊 MarketFeed ${ctx.label}\n`;
-  report += `> **Sinch CSM Intelligence Report** | ${date}\n`;
-  report += `> **Period:** ${ctx.timeframe} | ${newsArticles.length} signals | ${companies.length} accounts | ${sinchOpportunities.length} Sinch-relevant\n`;
-  report += `> *Scored against Sinch Market Intelligence Rubric (5 dimensions, 25 points)*\n\n`;
-  report += `---\n\n`;
-
-  // =====================================================
-  // SECTION 1: INDUSTRY TRENDS (Rubric Dimension 1)
-  // =====================================================
-  report += `## 1️⃣ Industry Trends & Market Pressures\n`;
-  report += `*What's shifting in your customers' markets—and why it creates urgency for action now.*\n\n`;
-
-  // Group trends by industry vertical
-  const verticalTrends = {};
-  companies.forEach(company => {
-    const ctx = INDUSTRY_CONTEXT[company];
-    if (!ctx) return;
-    if (!verticalTrends[ctx.vertical]) verticalTrends[ctx.vertical] = { companies: [], articles: [], pressures: [] };
-    verticalTrends[ctx.vertical].companies.push(company);
-    verticalTrends[ctx.vertical].articles.push(...grouped[company]);
-    verticalTrends[ctx.vertical].pressures.push(...ctx.pressures);
-  });
-
-  Object.entries(verticalTrends).forEach(([vertical, data]) => {
-    const topArticles = data.articles.slice(0, 3);
-    if (topArticles.length === 0) return;
-
-    report += `### ${vertical}\n`;
-    report += `**Accounts:** ${data.companies.join(', ')}\n\n`;
-
-    // Quantifiable implications
-    topArticles.forEach(article => {
-      report += `**Signal:** ${article.title}\n`;
-      const type = classifyNews(article.title, article.description);
-      if (type === 'EXPANSION') {
-        report += `> **Business Implication:** Market expansion signals indicate growing communication infrastructure needs. Companies entering new markets typically see 3-5x increase in customer notification volume within 6 months.\n\n`;
-      } else if (type === 'TECHNOLOGY') {
-        report += `> **Business Implication:** Digital transformation initiatives create immediate demand for scalable messaging APIs. Organizations undergoing platform modernization report 40% higher messaging spend within the first year.\n\n`;
-      } else if (type === 'FINANCIAL') {
-        report += `> **Business Implication:** Strong financial performance enables technology investment. Companies reporting revenue growth are 2.5x more likely to approve new vendor engagements in the following quarter.\n\n`;
-      } else if (type === 'PARTNERSHIP') {
-        report += `> **Business Implication:** New partnerships create integration touchpoints where messaging infrastructure becomes critical. Partner ecosystem expansion typically drives 60% increase in API call volume.\n\n`;
-      } else if (type === 'ISSUE') {
-        report += `> **Business Implication:** Operational challenges create urgency for reliable communication infrastructure. Companies experiencing service issues are 3x more receptive to redundancy and failover solutions.\n\n`;
-      } else {
-        report += `> **Business Implication:** This signal suggests evolving customer communication needs. Proactive outreach within 48 hours captures the engagement window before competitors.\n\n`;
-      }
-    });
-
-    report += `**💡 Conversation Starter:** *"I noticed [specific trend] in your industry. How is this affecting your customer communication strategy? Are you seeing similar pressure from [specific pressure]?"*\n\n`;
-  });
-
-  // =====================================================
-  // SECTION 2: SINCH USE CASES (Rubric Dimension 2)
-  // =====================================================
-  report += `---\n\n## 2️⃣ Sinch Use Case Alignment\n`;
-  report += `*How Sinch's four pillars—Engaged, Informed, Safe, Happy—address the specific challenges surfaced by today's signals.*\n\n`;
-
-  for (const [key, useCase] of Object.entries(SINCH_USE_CASES)) {
-    const matchedArticles = useCaseMatches[key];
-    const relevantCompanies = [...new Set(matchedArticles.map(a => a.company))];
-
-    report += `### ${useCase.icon} **${useCase.name}**: ${useCase.description}\n`;
-
-    if (matchedArticles.length > 0) {
-      report += `**Triggered by ${matchedArticles.length} signals** from: ${relevantCompanies.join(', ')}\n\n`;
-      matchedArticles.slice(0, 2).forEach(article => {
-        report += `- **${article.company}**: "${article.title}" → ${useCase.capabilities[0]} + ${useCase.capabilities[1]}\n`;
-      });
-      report += `\n**Value:** ${useCase.value}\n\n`;
-    } else {
-      report += `*No direct triggers this period, but proactively position during account reviews.*\n\n`;
-      report += `**Value:** ${useCase.value}\n\n`;
-    }
-  }
-
-  report += `**💡 Alignment Question:** *"When you think about keeping customers Engaged, Informed, Safe, and Happy—which of these feels most urgent for your team right now? Where are the biggest gaps?"*\n\n`;
-
-  // =====================================================
-  // SECTION 3: BUYING COMMITTEE (Rubric Dimension 3)
-  // =====================================================
-  report += `---\n\n## 3️⃣ Buying Committee Intelligence\n`;
-  report += `*Who needs to be in the room, what they care about, and how to navigate the decision.*\n\n`;
-
-  // Pick top 3 most active companies for detailed buying committee analysis
+  // Top companies by signal count
   const topCompanies = Object.entries(grouped)
     .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 3);
+    .slice(0, 5);
 
-  topCompanies.forEach(([company, articles]) => {
-    const personas = identifyBuyingCommittee(articles, company);
-    const industryCtx = INDUSTRY_CONTEXT[company];
-
-    report += `### ${company}\n`;
-    report += `**Industry:** ${industryCtx ? industryCtx.vertical : 'Technology'} | **Key Signals:** ${articles.length}\n\n`;
-    report += `| Persona | Their Priority | Their Pain Point | Sinch Value Prop |\n`;
-    report += `|---------|---------------|-----------------|------------------|\n`;
-
-    personas.forEach(personaKey => {
-      const persona = BUYING_COMMITTEE[personaKey];
-      if (!persona) return;
-      report += `| ${persona.title} | ${persona.priorities[0]} | ${persona.painPoints[0]} | ${persona.sinchPitch.substring(0, 80)}... |\n`;
-    });
-
-    report += `\n**Navigation Strategy:** Start with ${BUYING_COMMITTEE[personas[0]]?.title || 'technical stakeholder'} (most aligned with current signals), then expand to ${BUYING_COMMITTEE[personas[1]]?.title || 'business stakeholder'} for budget authority.\n\n`;
-    report += `**💡 Discovery Question:** *"Beyond your team, who else would need to be involved in a decision around customer communication infrastructure? What are their biggest concerns?"*\n\n`;
-  });
-
-  // =====================================================
-  // SECTION 4: REAL-LIFE STORIES (Rubric Dimension 4)
-  // =====================================================
-  report += `---\n\n## 4️⃣ Customer Success Stories\n`;
-  report += `*Compelling before-and-after narratives that make Sinch's impact feel personal and relevant.*\n\n`;
-
-  // Pick stories relevant to the top companies
-  const storiesUsed = new Set();
-  topCompanies.forEach(([company]) => {
-    const story = getRelevantStory(company);
-    const industryCtx = INDUSTRY_CONTEXT[company];
-    const storyKey = industryCtx?.vertical || 'default';
-
-    if (storiesUsed.has(storyKey)) return;
-    storiesUsed.add(storyKey);
-
-    report += `### For ${company} (${industryCtx?.vertical || 'Technology'})\n\n`;
-    report += `**The Story:** Imagine ${story.customer}—not unlike ${company}—that ${story.before}.\n\n`;
-    report += `**The Transformation:** After partnering with Sinch, they ${story.after}.\n\n`;
-    report += `**The Impact:** ${story.impact}. Timeline: ${story.timeframe}.\n\n`;
-    report += `**💡 Relevance Question:** *"Does this resonate with what you're experiencing? I imagine with [specific signal from their news], you might be facing similar challenges around [specific pain point]."*\n\n`;
-  });
-
-  // Add one more story if we have room
-  if (storiesUsed.size < 3 && companies.length > 3) {
-    const extraCompany = companies.find(c => !topCompanies.some(([tc]) => tc === c));
-    if (extraCompany) {
-      const story = getRelevantStory(extraCompany);
-      const industryCtx = INDUSTRY_CONTEXT[extraCompany];
-      const storyKey = industryCtx?.vertical || 'extra';
-      if (!storiesUsed.has(storyKey)) {
-        report += `### For ${extraCompany} (${industryCtx?.vertical || 'Technology'})\n\n`;
-        report += `**The Story:** ${story.customer} ${story.before}. After Sinch: ${story.after}. **Result:** ${story.impact}.\n\n`;
-      }
-    }
-  }
-
-  // =====================================================
-  // SECTION 5: HOW SINCH WINS (Rubric Dimension 5)
-  // =====================================================
-  report += `---\n\n## 5️⃣ How Sinch Wins\n`;
-  report += `*Not a feature list—but the logical conclusion to your customer's story.*\n\n`;
-
-  // Weave differentiators into the narrative based on signals
-  const hasMessagingSignals = useCaseMatches.ENGAGED.length > 0 || useCaseMatches.INFORMED.length > 0;
-  const hasSecuritySignals = useCaseMatches.SAFE.length > 0;
-  const hasScaleSignals = newsArticles.some(a => ((a.title || '') + (a.description || '')).toLowerCase().match(/scale|growth|expand|million|billion/));
-  const hasGlobalSignals = newsArticles.some(a => ((a.title || '') + (a.description || '')).toLowerCase().match(/international|global|cross-border|multi-market|region/));
-
-  report += `Based on the signals analyzed this period, here's why Sinch is the logical choice for your accounts:\n\n`;
-
-  if (hasScaleSignals) {
-    report += `**The Scale Story:** Your accounts are growing—and growth breaks communication infrastructure that wasn't built for it. Sinch ${SINCH_DIFFERENTIATORS.scale}, meaning your customers never have to worry about whether their messages will be delivered during a traffic spike. When ${topCompanies[0]?.[0] || 'your top account'} doubles their user base, their messaging just works.\n\n`;
-  }
-
-  if (hasGlobalSignals) {
-    report += `**The Global Story:** International expansion means navigating a maze of local regulations, carrier relationships, and number provisioning. Sinch has ${SINCH_DIFFERENTIATORS.reach}. Your customers don't need to become telecom experts in every new market—Sinch handles the complexity so they can focus on their actual business.\n\n`;
-  }
-
-  if (hasMessagingSignals) {
-    report += `**The Channel Story:** Your accounts are investing in customer engagement, but fragmented channels create fragmented experiences. Sinch offers a ${SINCH_DIFFERENTIATORS.omnichannel}. One integration, every channel, with ${SINCH_DIFFERENTIATORS.intelligence}. The result? Customers get the right message, on the right channel, at the right time—without your accounts managing 5 different vendor relationships.\n\n`;
-  }
-
-  if (hasSecuritySignals) {
-    report += `**The Trust Story:** Every failed verification is a lost customer. Every successful fraud attempt erodes trust. Sinch's verification suite delivers ${SINCH_DIFFERENTIATORS.reliability}, with intelligent fallback that ensures every legitimate user gets through while keeping bad actors out. For accounts handling sensitive transactions, this isn't a nice-to-have—it's existential.\n\n`;
-  }
-
-  report += `**The Speed Story:** Your accounts don't have 6 months to evaluate and integrate. Sinch's ${SINCH_DIFFERENTIATORS.speed}, with ${SINCH_DIFFERENTIATORS.ecosystem}. From decision to live in days, not months.\n\n`;
-
-  report += `**💡 Differentiation Question:** *"Given what you've shared about your priorities, do you see how Sinch's approach—[specific differentiator relevant to their situation]—would address [their specific challenge] differently than what you have today?"*\n\n`;
-
-  // =====================================================
-  // CSM ACTION PLAN
-  // =====================================================
-  report += `---\n\n## 🎯 **CSM Action Plan**\n\n`;
-
-  report += `### Immediate (This Week)\n`;
+  // Urgency classification
   const highUrgency = Object.entries(grouped).filter(([, articles]) => determineUrgency(articles) === 'HIGH_URGENCY');
   const medUrgency = Object.entries(grouped).filter(([, articles]) => determineUrgency(articles) === 'MEDIUM_URGENCY');
 
+  // ===== REPORT =====
+  let report = `# ${ctx.label}\n`;
+  report += `> ${date} | ${ctx.timeframe} | **${newsArticles.length}** signals across **${companies.length}** accounts | **${sinchOpportunities.length}** Sinch-relevant\n\n`;
+
+  // ===== EXECUTIVE SNAPSHOT =====
+  report += `## Executive Snapshot\n\n`;
+  report += `| Metric | Value |\n`;
+  report += `|--------|-------|\n`;
+  report += `| High-priority accounts | ${highUrgency.length > 0 ? highUrgency.map(([c]) => c).join(', ') : 'None this period'} |\n`;
+  report += `| Top use case triggered | ${Object.entries(useCaseMatches).sort((a, b) => b[1].length - a[1].length)[0]?.[0] || 'N/A'} (${Object.entries(useCaseMatches).sort((a, b) => b[1].length - a[1].length)[0]?.[1]?.length || 0} signals) |\n`;
+  report += `| Most active accounts | ${topCompanies.slice(0, 3).map(([c, a]) => `${c} (${a.length})`).join(', ')} |\n`;
+  report += `| Immediate actions needed | ${highUrgency.length + Math.min(medUrgency.length, 3)} |\n\n`;
+
+  // ===== SECTION 1: INDUSTRY TRENDS =====
+  report += `---\n\n## 1. Industry Trends & Urgency\n\n`;
+
+  // Pick top 5 most impactful signals across all companies
+  const topSignals = sinchOpportunities.length > 0 ? sinchOpportunities.slice(0, 5) : newsArticles.slice(0, 5);
+
+  report += `| Company | Signal | Implication for Sinch |\n`;
+  report += `|---------|--------|----------------------|\n`;
+  topSignals.forEach(article => {
+    const type = classifyNews(article.title, article.description);
+    const implications = {
+      EXPANSION: 'New market = 3-5x notification volume growth',
+      TECHNOLOGY: 'Platform modernization = 40% higher messaging spend',
+      FINANCIAL: 'Revenue growth = 2.5x more likely to approve new vendors',
+      PARTNERSHIP: 'Partner expansion = 60% increase in API call volume',
+      ISSUE: 'Service issues = 3x more receptive to failover solutions',
+      GENERAL: 'Evolving needs = engagement window open for 48 hours'
+    };
+    report += `| ${article.company} | ${article.title.substring(0, 65)}${article.title.length > 65 ? '...' : ''} | ${implications[type] || implications.GENERAL} |\n`;
+  });
+
+  report += `\n> **💡 Conversation opener:** *"I saw [signal] about your company—how is this affecting your communication strategy? Are you seeing increased pressure on [specific area]?"*\n\n`;
+
+  // ===== SECTION 2: SINCH USE CASES =====
+  report += `---\n\n## 2. Sinch Use Case Mapping\n\n`;
+  report += `Each signal maps to one of Sinch's four pillars. Here's where the opportunities are this period:\n\n`;
+
+  report += `| Use Case | Signals | Key Accounts | Lead Capability |\n`;
+  report += `|----------|---------|--------------|-----------------|\n`;
+  for (const [key, useCase] of Object.entries(SINCH_USE_CASES)) {
+    const matched = useCaseMatches[key];
+    const cos = [...new Set(matched.map(a => a.company))].slice(0, 3);
+    report += `| ${useCase.icon} **${useCase.name}** | ${matched.length} | ${cos.length > 0 ? cos.join(', ') : '—'} | ${useCase.capabilities[0]} |\n`;
+  }
+
+  // Detail the top use case
+  const topUseCase = Object.entries(useCaseMatches).sort((a, b) => b[1].length - a[1].length)[0];
+  if (topUseCase && topUseCase[1].length > 0) {
+    const uc = SINCH_USE_CASES[topUseCase[0]];
+    report += `\n**Focus: ${uc.icon} ${uc.name}** — ${uc.value}\n\n`;
+    topUseCase[1].slice(0, 2).forEach(article => {
+      report += `- **${article.company}**: "${article.title.substring(0, 70)}" → ${uc.capabilities[0]} + ${uc.capabilities[1]}\n`;
+    });
+  }
+
+  report += `\n> **💡 Ask:** *"Which matters most right now—keeping customers Engaged, Informed, Safe, or Happy? Where's the biggest gap?"*\n\n`;
+
+  // ===== SECTION 3: BUYING COMMITTEE =====
+  report += `---\n\n## 3. Buying Committee Map\n\n`;
+
+  // Show top 2 companies only for conciseness
+  topCompanies.slice(0, 2).forEach(([company, articles]) => {
+    const personas = identifyBuyingCommittee(articles, company);
+    const industryCtx = INDUSTRY_CONTEXT[company];
+
+    report += `### ${company} (${industryCtx?.vertical || 'Technology'})\n\n`;
+    report += `| Persona | Priority | Pain Point | Sinch Pitch |\n`;
+    report += `|---------|----------|------------|-------------|\n`;
+    personas.slice(0, 3).forEach(personaKey => {
+      const persona = BUYING_COMMITTEE[personaKey];
+      if (!persona) return;
+      report += `| ${persona.title} | ${persona.priorities[0]} | ${persona.painPoints[0]} | ${persona.sinchPitch.substring(0, 60)}... |\n`;
+    });
+    report += `\n**Entry point:** ${BUYING_COMMITTEE[personas[0]]?.title || 'Technical lead'} → expand to ${BUYING_COMMITTEE[personas[1]]?.title || 'Business sponsor'}\n\n`;
+  });
+
+  report += `> **💡 Ask:** *"Who else needs to be involved in a communication infrastructure decision? What keeps them up at night?"*\n\n`;
+
+  // ===== SECTION 4: REAL-LIFE STORY =====
+  report += `---\n\n## 4. Success Story to Tell\n\n`;
+
+  // One compelling story, matched to top company
+  const storyCompany = topCompanies[0]?.[0] || companies[0];
+  const story = getRelevantStory(storyCompany);
+  const storyCtx = INDUSTRY_CONTEXT[storyCompany];
+
+  report += `**For your next conversation with ${storyCompany}:**\n\n`;
+  report += `*"Let me share what happened with ${story.customer}. They ${story.before}. After deploying Sinch, they ${story.after}. The result? ${story.impact}. All within ${story.timeframe}."*\n\n`;
+  report += `> **💡 Ask:** *"Does this sound familiar? Given [their recent signal], are you facing similar challenges around [pain point]?"*\n\n`;
+
+  // Add a second story if different vertical
+  if (topCompanies.length > 1) {
+    const story2Company = topCompanies[1][0];
+    const story2 = getRelevantStory(story2Company);
+    const story2Ctx = INDUSTRY_CONTEXT[story2Company];
+    if (story2Ctx?.vertical !== storyCtx?.vertical) {
+      report += `**For ${story2Company}:** ${story2.customer} went from ${story2.before.substring(0, 80)}... to ${story2.after.substring(0, 80)}... Result: ${story2.impact.split(',')[0]}.\n\n`;
+    }
+  }
+
+  // ===== SECTION 5: HOW SINCH WINS =====
+  report += `---\n\n## 5. Why Sinch Wins Here\n\n`;
+
+  // Pick 2-3 most relevant differentiators based on signals (not all of them)
+  const diffPoints = [];
+  if (newsArticles.some(a => ((a.title || '') + (a.description || '')).toLowerCase().match(/scale|growth|expand|million|billion/))) {
+    diffPoints.push(`**Scale without worry** — Sinch ${SINCH_DIFFERENTIATORS.scale}. When your accounts grow, their messaging infrastructure grows with them—no re-architecture needed.`);
+  }
+  if (newsArticles.some(a => ((a.title || '') + (a.description || '')).toLowerCase().match(/international|global|cross-border|multi-market/))) {
+    diffPoints.push(`**Global reach, local expertise** — ${SINCH_DIFFERENTIATORS.reach}. Your accounts expand internationally without becoming telecom compliance experts.`);
+  }
+  if (useCaseMatches.ENGAGED.length > 0 || useCaseMatches.INFORMED.length > 0) {
+    diffPoints.push(`**One API, every channel** — ${SINCH_DIFFERENTIATORS.omnichannel}. Replace 5 vendor relationships with one integration that handles intelligent channel selection automatically.`);
+  }
+  if (useCaseMatches.SAFE.length > 0) {
+    diffPoints.push(`**Trust at scale** — ${SINCH_DIFFERENTIATORS.reliability}. Every legitimate user gets verified; every bad actor gets blocked.`);
+  }
+  // Always include speed
+  diffPoints.push(`**Live in days, not months** — ${SINCH_DIFFERENTIATORS.speed}. ${SINCH_DIFFERENTIATORS.ecosystem}.`);
+
+  // Show max 3 differentiators
+  diffPoints.slice(0, 3).forEach(point => {
+    report += `${point}\n\n`;
+  });
+
+  report += `> **💡 Ask:** *"Do you see how this approach would address [their challenge] differently than what you have today?"*\n\n`;
+
+  // ===== CSM ACTION PLAN =====
+  report += `---\n\n## Action Plan\n\n`;
+
+  report += `### This Week\n`;
   if (highUrgency.length > 0) {
-    highUrgency.forEach(([company, articles]) => {
-      report += `- 🔴 **${company}**: Contact within 24 hours. Signal: "${articles[0].title.substring(0, 80)}"\n`;
+    highUrgency.slice(0, 3).forEach(([company, articles]) => {
+      report += `- 🔴 **${company}** — Contact within 24h. Signal: "${articles[0].title.substring(0, 70)}"\n`;
     });
   }
   if (medUrgency.length > 0) {
     medUrgency.slice(0, 3).forEach(([company, articles]) => {
-      report += `- 🟡 **${company}**: Schedule touchpoint this week. Signal: "${articles[0].title.substring(0, 80)}"\n`;
+      report += `- 🟡 **${company}** — Schedule touchpoint. Signal: "${articles[0].title.substring(0, 70)}"\n`;
     });
+  }
+  if (highUrgency.length === 0 && medUrgency.length === 0) {
+    report += `- 🟢 No urgent actions. Focus on relationship building and sharing insights with champions.\n`;
   }
 
   report += `\n### This Month\n`;
   report += `- Update QBR decks for accounts with 3+ signals\n`;
-  report += `- Share relevant industry insights with champions at top accounts\n`;
-  report += `- Brief AE partners on ${sinchOpportunities.length} Sinch-relevant signals\n`;
-  report += `- Log all insights in Salesforce for next touchpoint context\n`;
+  report += `- Share this report's insights with AE partners\n`;
+  report += `- Log key signals in Salesforce for next touchpoint context\n`;
 
   if (period === 'quarterly' || period === 'monthly') {
-    report += `\n### Strategic (This Quarter)\n`;
-    report += `- Schedule executive engagement with top 3 active accounts\n`;
+    report += `\n### This Quarter\n`;
+    report += `- Executive engagement with top 3 active accounts\n`;
     report += `- Develop account-specific Sinch transformation roadmaps\n`;
-    report += `- Prepare competitive displacement briefs where competitor activity detected\n`;
-    report += `- Align with Product team on upcoming features relevant to account needs\n`;
+    report += `- Competitive displacement briefs where competitor activity detected\n`;
   }
 
   // ===== TREND ANALYSIS (for weekly/monthly/quarterly) =====
-  report += generateTrendAnalysis(newsArticles, period);
+  if (period !== 'daily') {
+    report += generateTrendAnalysis(newsArticles, period);
+  }
 
   // ===== FOOTER =====
   report += `\n---\n\n`;
-  report += `*Generated by MarketFeed | Aligned to Sinch Market Intelligence Rubric (25-point scale)*\n`;
-  report += `*Report Date: ${date} | ${ctx.refreshNote}*\n`;
-  report += `*Rubric Dimensions: Industry Trends ✓ | Sinch Use Cases ✓ | Buying Committee ✓ | Real-Life Stories ✓ | How Sinch Wins ✓*\n`;
+  report += `*MarketFeed ${ctx.label} | ${date} | ${ctx.refreshNote}*\n`;
+  report += `*Rubric: Industry Trends ✓ | Use Cases ✓ | Buying Committee ✓ | Stories ✓ | Differentiation ✓*\n`;
 
   return report;
 }

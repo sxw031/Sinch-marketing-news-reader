@@ -493,7 +493,7 @@ function setupEventListeners() {
       });
       const data = await res.json();
       if (data.success) {
-        content.innerHTML = `<div class="report-body">${renderMarkdown(data.report)}</div>`;
+        content.innerHTML = renderMarkdown(data.report);
       } else {
         content.innerHTML = '<p style="text-align:center;padding:2rem;">Failed to generate report.</p>';
       }
@@ -583,7 +583,7 @@ function setupEventListeners() {
         body: JSON.stringify({ query: q, context: allNews.slice(0, 50) })
       });
       const data = await res.json();
-      botMsg.innerHTML = renderMarkdown(data.answer || 'No answer available.');
+      botMsg.innerHTML = renderMarkdown(data.answer || 'No answer available.').replace('<div class="report-body">', '<div>');
     } catch (e) { botMsg.textContent = 'Connection error. Please try again.'; }
   }
   document.getElementById('sendAiMessage').addEventListener('click', handleChat);
@@ -656,21 +656,82 @@ function appendChat(role, text) {
 
 function renderMarkdown(md) {
   if (!md) return '';
-  return md
-    .replace(/^### (.*$)/gim, '<h3 class="report-h3">$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2 class="report-h2">$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1 class="report-h1">$1</h1>')
-    .replace(/^\> (.*$)/gim, '<blockquote class="report-quote">$1</blockquote>')
-    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^---$/gim, '<hr class="report-divider">')
-    .replace(/^\* (.*$)/gim, '<li>$1</li>')
-    .replace(/^- (.*$)/gim, '<li>$1</li>')
-    .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="report-img">')
-    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="report-link">$1</a>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>');
+  
+  // Process tables first
+  const lines = md.split('\n');
+  const processed = [];
+  let inTable = false;
+  let tableRows = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      if (!inTable) { inTable = true; tableRows = []; }
+      // Skip separator rows (|---|---|)
+      if (line.match(/^\|[\s\-:|]+\|$/)) continue;
+      tableRows.push(line);
+    } else {
+      if (inTable) {
+        // Render collected table
+        let tableHtml = '<table>';
+        tableRows.forEach((row, idx) => {
+          const cells = row.split('|').filter(c => c.trim() !== '');
+          const tag = idx === 0 ? 'th' : 'td';
+          const rowTag = idx === 0 ? 'thead' : (idx === 1 ? 'tbody' : '');
+          if (idx === 0) tableHtml += '<thead>';
+          if (idx === 1) tableHtml += '</thead><tbody>';
+          tableHtml += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+        processed.push(tableHtml);
+        inTable = false;
+        tableRows = [];
+      }
+      processed.push(line);
+    }
+  }
+  if (inTable && tableRows.length) {
+    let tableHtml = '<table>';
+    tableRows.forEach((row, idx) => {
+      const cells = row.split('|').filter(c => c.trim() !== '');
+      const tag = idx === 0 ? 'th' : 'td';
+      if (idx === 0) tableHtml += '<thead>';
+      if (idx === 1) tableHtml += '</thead><tbody>';
+      tableHtml += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+    processed.push(tableHtml);
+  }
+  
+  let html = processed.join('\n');
+  
+  // Headings
+  html = html.replace(/^### (.*$)/gim, '<h3 class="report-h3">$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2 class="report-h2">$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1 class="report-h1">$1</h1>');
+  // Blockquotes
+  html = html.replace(/^\> (.*$)/gim, '<blockquote class="report-quote">$1</blockquote>');
+  // Inline formatting
+  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Dividers
+  html = html.replace(/^---$/gim, '<hr class="report-divider">');
+  // List items
+  html = html.replace(/^[\*\-] (.*$)/gim, '<li>$1</li>');
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>.*?<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
+  // Images and links
+  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="report-img">');
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="report-link">$1</a>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  // Clean up empty paragraphs
+  html = html.replace(/<p><\/p>/g, '');
+  html = html.replace(/<p><br><\/p>/g, '');
+  
+  return `<div class="report-body">${html}</div>`;
 }
 
 function showLoading(show) {
