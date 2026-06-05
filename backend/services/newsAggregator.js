@@ -156,9 +156,13 @@ async function getNews(filters = {}) {
       sql += ` AND (source LIKE '%Bloomberg%' OR source LIKE '%Financial Times%' OR source LIKE '%WSJ%' OR source LIKE '%Yahoo Finance%' OR source LIKE '%MarketWatch%' OR source LIKE '%Barron%')`;
     } else if (filters.source === 'Tech & Industry') {
       sql += ` AND (source LIKE '%TechCrunch%' OR source LIKE '%Verge%' OR source LIKE '%Wired%' OR source LIKE '%ZDNet%' OR source LIKE '%Ars Technica%' OR source LIKE '%TechRadar%')`;
+    } else if (filters.source === 'LinkedIn') {
+      sql += ` AND source LIKE '%LinkedIn%'`;
+    } else if (filters.source === 'Official Website') {
+      sql += ` AND source LIKE '%Official%'`;
     } else {
-      sql += ' AND source = ?';
-      params.push(filters.source);
+      sql += ' AND source LIKE ?';
+      params.push(`%${filters.source}%`);
     }
   }
 
