@@ -72,6 +72,7 @@ async function generateSpeech(text, options = {}) {
 /**
  * Generate a podcast script from news articles (~3 minutes)
  * Focused on top 5 most Sinch-relevant news
+ * Style: concise, conversational, slightly humorous, no repetition
  */
 function generatePodcastScript(news) {
   if (!news || news.length === 0) return null;
@@ -95,33 +96,78 @@ function generatePodcastScript(news) {
   // Get top 5 most relevant
   const top5 = scored.sort((a, b) => b.sinchScore - a.sinchScore).slice(0, 5);
 
-  let script = `Good morning and welcome to your MarketFeed Strategic Briefing for ${date}. `;
-  script += `I'm Christopher, and today I'm bringing you the top five stories most relevant to Sinch's enterprise communications business. Let's get started.\n\n`;
+  // Transition phrases for variety
+  const transitions = [
+    'Next up,',
+    'Moving on,',
+    'Here\'s an interesting one.',
+    'And this caught my eye.',
+    'Last but not least,'
+  ];
+
+  // Sinch angle phrases - varied and concise
+  const sinchAngles = {
+    messaging: [
+      'That\'s right in Sinch\'s wheelhouse.',
+      'Classic messaging play, right up our alley.',
+      'If that doesn\'t scream Sinch opportunity, I don\'t know what does.'
+    ],
+    digital: [
+      'Digital transformation means new communication needs. You know what that means for us.',
+      'Where there\'s platform investment, there\'s API demand.',
+      'Another company going digital, another reason to pick up the phone.'
+    ],
+    expansion: [
+      'New markets, new messaging needs. Time to reach out.',
+      'Expansion usually means they\'ll need to talk to more customers. We can help with that.',
+      'Growth mode activated. Perfect time for a Sinch conversation.'
+    ]
+  };
+
+  let script = `Hey there, welcome to your MarketFeed Briefing for ${date}. `;
+  script += `I'm Christopher, your daily dose of strategic intel. Got five stories for you today, let's dive in.\n\n`;
 
   top5.forEach((article, idx) => {
-    script += `Story number ${idx + 1}. `;
-    script += `From ${article.company}. `;
-    const title = article.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
-    script += `${title}. `;
-    if (article.description) {
-      const desc = article.description.substring(0, 250).replace(/[|–—]/g, ',').trim();
-      if (desc.length > 30) script += `${desc}. `;
+    // Use transition phrase
+    if (idx === 0) {
+      script += `Number one. `;
+    } else {
+      script += `${transitions[idx]}  `;
     }
-    // Add Sinch angle
+
+    // Combine title and description into one concise summary instead of reading both
+    const title = article.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
+    const desc = (article.description || '').replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
+
+    // If description adds meaningful new info beyond the title, blend them; otherwise just use title
+    const titleWords = new Set(title.toLowerCase().split(/\s+/));
+    const descWords = desc.toLowerCase().split(/\s+/);
+    const newInfoInDesc = descWords.filter(w => w.length > 4 && !titleWords.has(w)).length;
+
+    script += `${article.company}: ${title}. `;
+
+    // Only add description snippet if it has substantial new info (not repeating the title)
+    if (desc.length > 50 && newInfoInDesc > 5) {
+      const shortDesc = desc.substring(0, 120).replace(/\s\S*$/, '');
+      script += `In short, ${shortDesc}. `;
+    }
+
+    // Add concise Sinch angle with variety
     const text = `${article.title} ${article.description || ''}`.toLowerCase();
     if (text.includes('messaging') || text.includes('sms') || text.includes('communication')) {
-      script += `This directly relates to Sinch's core messaging and communications platform capabilities. `;
+      script += sinchAngles.messaging[idx % sinchAngles.messaging.length] + ' ';
     } else if (text.includes('digital') || text.includes('platform') || text.includes('api')) {
-      script += `This signals potential opportunities for Sinch's API and platform solutions. `;
+      script += sinchAngles.digital[idx % sinchAngles.digital.length] + ' ';
     } else if (text.includes('expansion') || text.includes('partnership') || text.includes('launch')) {
-      script += `This could open doors for Sinch partnership discussions with the ${article.company} team. `;
+      script += sinchAngles.expansion[idx % sinchAngles.expansion.length] + ' ';
     }
     script += '\n\n';
   });
 
-  script += `That concludes today's top five strategic stories for Sinch customer success managers. `;
-  script += `Key takeaway: stay close to your enterprise clients during periods of digital transformation, as these moments create the strongest upsell opportunities. `;
-  script += `Have a productive day, and we'll see you next time on MarketFeed.`;
+  // Closing - concise with a touch of humor
+  script += `And that's your top five. `;
+  script += `Quick reminder: the best CSM conversations start with, hey I saw this news about your company. Simple, but it works every time. `;
+  script += `Alright, go crush it today. See you tomorrow on MarketFeed!`;
 
   return script;
 }

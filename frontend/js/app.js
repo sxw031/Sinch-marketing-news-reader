@@ -21,8 +21,8 @@ const LOGO_MAP = {
   'Didi': 'https://logo.clearbit.com/didiglobal.com',
   'DBS': 'https://logo.clearbit.com/dbs.com',
   'Tencent': 'https://logo.clearbit.com/tencent.com',
-  'Bank of China': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Bank_of_China_logo.svg/200px-Bank_of_China_logo.svg.png',
-  'ByteDance': 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a0/ByteDance_logo_English.svg/200px-ByteDance_logo_English.svg.png',
+  'Bank of China': '/img/bankofchina.png',
+  'ByteDance': '/img/bytedance.png',
   'Gojek': 'https://logo.clearbit.com/gojek.com',
   'Citigroup': 'https://logo.clearbit.com/citigroup.com',
   'Binance': 'https://logo.clearbit.com/binance.com',
@@ -116,6 +116,8 @@ function calculateSinchRelevance(article) {
 function sortAndRender() {
   if (currentSort === 'relevance') {
     allNews.sort((a, b) => calculateSinchRelevance(b) - calculateSinchRelevance(a));
+  } else if (currentSort === 'oldest') {
+    allNews.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
   } else {
     allNews.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
   }
@@ -332,6 +334,7 @@ function setupEventListeners() {
       switch (range) {
         case '1h': now.setHours(now.getHours() - 1); break;
         case '6h': now.setHours(now.getHours() - 6); break;
+        case '12h': now.setHours(now.getHours() - 12); break;
         case '24h': now.setHours(now.getHours() - 24); break;
         case '48h': now.setHours(now.getHours() - 48); break;
         case '72h': now.setHours(now.getHours() - 72); break;
