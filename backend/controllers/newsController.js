@@ -24,6 +24,7 @@ async function getAllNews(req, res) {
       category: req.query.category,
       source: req.query.source,
       search: req.query.search,
+      sort: req.query.sort || 'latest',
       limit: req.query.limit ? parseInt(req.query.limit) : 200
     };
     const news = await getNews(filters);

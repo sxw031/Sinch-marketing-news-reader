@@ -149,8 +149,17 @@ async function getNews(filters = {}) {
   }
 
   if (filters.source) {
-    sql += ' AND source = ?';
-    params.push(filters.source);
+    // Support source category filtering
+    if (filters.source === 'Major Media') {
+      sql += ` AND (source LIKE '%Reuters%' OR source LIKE '%AP%' OR source LIKE '%BBC%' OR source LIKE '%CNBC%' OR source LIKE '%CNN%' OR source LIKE '%Guardian%')`;
+    } else if (filters.source === 'Financial') {
+      sql += ` AND (source LIKE '%Bloomberg%' OR source LIKE '%Financial Times%' OR source LIKE '%WSJ%' OR source LIKE '%Yahoo Finance%' OR source LIKE '%MarketWatch%' OR source LIKE '%Barron%')`;
+    } else if (filters.source === 'Tech & Industry') {
+      sql += ` AND (source LIKE '%TechCrunch%' OR source LIKE '%Verge%' OR source LIKE '%Wired%' OR source LIKE '%ZDNet%' OR source LIKE '%Ars Technica%' OR source LIKE '%TechRadar%')`;
+    } else {
+      sql += ' AND source = ?';
+      params.push(filters.source);
+    }
   }
 
   if (filters.search) {
@@ -158,7 +167,15 @@ async function getNews(filters = {}) {
     params.push(`%${filters.search}%`, `%${filters.search}%`);
   }
 
-  sql += ' ORDER BY publishedAt DESC';
+  // Sort support
+  if (filters.sort === 'relevance') {
+    // Sort by Sinch relevance - articles with messaging/communication keywords first
+    sql += ` ORDER BY (
+      CASE WHEN (lower(title) LIKE '%messaging%' OR lower(title) LIKE '%communication%' OR lower(title) LIKE '%api%' OR lower(title) LIKE '%notification%' OR lower(title) LIKE '%sms%' OR lower(title) LIKE '%rcs%' OR lower(title) LIKE '%whatsapp%' OR lower(title) LIKE '%chatbot%' OR lower(title) LIKE '%omnichannel%' OR lower(title) LIKE '%cpaas%' OR lower(title) LIKE '%customer engagement%' OR lower(title) LIKE '%digital%' OR lower(title) LIKE '%platform%' OR lower(title) LIKE '%enterprise%') THEN 0 ELSE 1 END
+    ), publishedAt DESC`;
+  } else {
+    sql += ' ORDER BY publishedAt DESC';
+  }
 
   if (filters.limit) {
     sql += ' LIMIT ?';

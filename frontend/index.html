@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MarketFeed | Strategic Insights</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,11 @@
                     </button>
                 </div>
 
-                <div class="nav-right">
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="nav-right" id="navRight">
                     <div class="search-bar">
                         <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;"></i>
                         <input type="text" id="searchInput" placeholder="Search insights..." style="padding-left: 2.5rem;">
@@ -35,11 +39,11 @@
                     <button id="themeToggle" class="btn-theme" title="Toggle theme">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button id="refreshBtn" class="btn-icon-text btn-refresh" title="Quick Strategic Insights (24h)">
+                    <button id="refreshBtn" class="btn-icon-text btn-refresh" title="Quick Refresh">
                         <i class="fas fa-bolt"></i>
                         <span>Refresh</span>
                     </button>
-                    <button id="fetchAllBtn" class="btn-icon-text btn-outline" title="Fetch All News (Deeper Scan)">
+                    <button id="fetchAllBtn" class="btn-icon-text btn-outline" title="Fetch All News">
                         <i class="fas fa-globe"></i>
                         <span>Fetch All</span>
                     </button>
@@ -71,7 +75,7 @@
                 <div class="quick-time-filters">
                     <button class="btn-quick-time" data-range="6h">6h</button>
                     <button class="btn-quick-time" data-range="12h">12h</button>
-                    <button class="btn-quick-time" data-range="24h">24h</button>
+                    <button class="btn-quick-time active" data-range="24h">24h</button>
                     <button class="btn-quick-time" data-range="48h">48h</button>
                     <button class="btn-quick-time" data-range="72h">72h</button>
                     <button class="btn-quick-time" data-range="1w">1w</button>
@@ -80,7 +84,7 @@
                     <button class="btn-quick-time btn-yearly" data-range="2023">2023</button>
                     <button class="btn-quick-time btn-yearly" data-range="2024">2024</button>
                     <button class="btn-quick-time btn-yearly" data-range="2025">2025</button>
-                    <button class="btn-quick-time btn-yearly" data-range="2026">2026 (YTD)</button>
+                    <button class="btn-quick-time btn-yearly" data-range="2026">2026</button>
                 </div>
                 
                 <div class="filter-row">
@@ -89,7 +93,7 @@
                             <span class="filter-label">Category</span>
                             <select id="categoryFilter" class="filter-select">
                                 <option value="">All Categories</option>
-                                <option value="Strategic Insights">Strategic Insights</option>
+                                <option value="Strategic Insights">Strategic</option>
                                 <option value="Finance">Finance</option>
                                 <option value="Marketing">Marketing</option>
                                 <option value="Technology">Technology</option>
@@ -100,44 +104,39 @@
                             <span class="filter-label">Source</span>
                             <select id="sourceFilter" class="filter-select">
                                 <option value="">All Sources</option>
-                                <optgroup label="Premium Sources">
+                                <optgroup label="Premium">
                                   <option value="LinkedIn">LinkedIn</option>
-                                  <option value="Official Website">Official Website</option>
+                                  <option value="Official Website">Official</option>
                                 </optgroup>
                                 <optgroup label="Major Media">
                                   <option value="Reuters">Reuters</option>
-                                  <option value="Bloomberg.com">Bloomberg</option>
-                                  <option value="WSJ">Wall Street Journal</option>
+                                  <option value="Bloomberg">Bloomberg</option>
                                   <option value="BBC">BBC</option>
-                                  <option value="South China Morning Post">South China Morning Post</option>
+                                  <option value="CNBC">CNBC</option>
                                 </optgroup>
                                 <optgroup label="Financial">
                                   <option value="Yahoo Finance">Yahoo Finance</option>
                                   <option value="Seeking Alpha">Seeking Alpha</option>
-                                  <option value="MarketBeat">MarketBeat</option>
-                                  <option value="Investing.com">Investing.com</option>
-                                  <option value="CoinDesk">CoinDesk</option>
                                 </optgroup>
-                                <optgroup label="Tech & Industry">
-                                  <option value="Tech in Asia">Tech in Asia</option>
-                                  <option value="The Business Times">The Business Times</option>
-                                  <option value="NDTV Profit">NDTV Profit</option>
-                                </optgroup>
-                                <optgroup label="News Aggregators">
+                                <optgroup label="Aggregators">
                                   <option value="Google News">Google News</option>
                                   <option value="Bing News">Bing News</option>
                                 </optgroup>
                             </select>
                         </div>
-                        <button id="applyFiltersBtn" class="btn-icon-text btn-apply">Apply Filters</button>
+                        <div class="sort-controls">
+                            <span class="filter-label">Sort</span>
+                            <button class="btn-sort active" data-sort="latest">Latest</button>
+                            <button class="btn-sort" data-sort="relevance">Sinch Relevance</button>
+                        </div>
                     </div>
 
                     <div class="filter-actions">
                         <button id="generateReportBtn" class="btn-icon-text btn-strategy">
-                            <i class="fas fa-wand-magic-sparkles"></i> Generate Strategy Report
+                            <i class="fas fa-wand-magic-sparkles"></i> <span>Strategy Report</span>
                         </button>
                         <button id="resetBtn" class="btn-icon-text btn-reset">
-                            <i class="fas fa-undo"></i> Reset
+                            <i class="fas fa-undo"></i> <span>Reset</span>
                         </button>
                     </div>
                 </div>
@@ -157,7 +156,7 @@
 
                 <!-- Empty State -->
                 <div id="emptyState" class="empty-state" style="display: none;">
-                    <div class="empty-icon" style="font-size: 4rem; margin-bottom: 1.5rem;">📡</div>
+                    <div class="empty-icon" style="font-size: 3.5rem; margin-bottom: 1.5rem;">📡</div>
                     <h3>Initializing Feed...</h3>
                     <p>We're currently aggregating the latest news for your selected companies.</p>
                 </div>
@@ -172,13 +171,13 @@
                 <h2>Select Companies</h2>
                 <span class="close" id="closeSelector">&times;</span>
             </div>
-            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem;">
                 <button id="selectAllBtn" class="btn-icon-text btn-reset" style="flex: 1; justify-content: center;">Select All</button>
                 <button id="deselectAllBtn" class="btn-icon-text btn-reset" style="flex: 1; justify-content: center;">Deselect All</button>
             </div>
             <div class="company-grid" id="companyFilters"></div>
-            <div style="margin-top: 2.5rem; display: flex; justify-content: flex-end;">
-                <button id="applySelectorBtn" class="btn-icon-text btn-refresh" style="padding: 0.8rem 2.5rem;">Apply Selection</button>
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                <button id="applySelectorBtn" class="btn-icon-text btn-refresh" style="padding: 0.7rem 2rem;">Apply</button>
             </div>
         </div>
     </div>
@@ -186,7 +185,7 @@
     <!-- Article Detail Modal -->
     <div id="articleModal" class="modal">
         <div class="modal-content">
-            <span class="close" id="closeModal" style="position: absolute; right: 2rem; top: 1.5rem;">&times;</span>
+            <span class="close" id="closeModal" style="position: absolute; right: 1.5rem; top: 1.25rem;">&times;</span>
             <div id="modalBody"></div>
         </div>
     </div>
@@ -196,14 +195,14 @@
         <div id="aiChatWindow" class="ai-chat-window" style="display: none;">
             <div class="ai-chat-header">
                 <span><i class="fas fa-robot"></i> MarketFeed AI</span>
-                <span id="closeAiChat" class="close-chat">&times;</span>
+                <span id="closeAiChat" class="close-chat" style="cursor:pointer; font-size: 1.2rem;">&times;</span>
             </div>
             <div id="aiChatMessages" class="ai-chat-messages">
-                <div class="ai-message bot">Hello! I'm your MarketFeed AI. I can analyze news and trends for you. Ask me anything!</div>
+                <div class="ai-message bot">Hello! I'm your MarketFeed AI assistant. Ask me about company trends, Sinch opportunities, or market analysis.</div>
             </div>
             <div class="ai-chat-input-area">
-                <input type="text" id="aiChatInput" placeholder="Ask about companies...">
-                <button id="sendAiMessage" class="btn-refresh" style="width: 44px; height: 44px; padding: 0; justify-content: center;"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="aiChatInput" placeholder="Ask about companies, trends...">
+                <button id="sendAiMessage" class="btn-refresh" style="width: 40px; height: 40px; padding: 0; justify-content: center;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
         <button id="aiChatToggle" class="ai-chat-toggle" title="AI Search & Chat">
@@ -215,18 +214,21 @@
     <div id="reportModal" class="modal">
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
-                <h2><i class="fas fa-file-contract"></i> Strategic Analysis & Plan</h2>
+                <h2><i class="fas fa-file-contract"></i> Strategic Analysis</h2>
                 <span class="close" id="closeReportModal">&times;</span>
             </div>
-            <div id="reportContent" class="report-content" style="padding: 1.5rem 0;">
-                <div class="report-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;">
+            <div id="reportContent" class="report-content" style="padding: 1rem 0;">
+                <div class="report-loading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
                     <div class="spinner"></div>
-                    <p>AI is crafting your strategic plan based on latest insights...</p>
+                    <p>Generating strategic analysis...</p>
                 </div>
             </div>
-            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap;">
+                <button id="listenReportBtn" class="btn-icon-text btn-podcast">
+                    <i class="fas fa-headphones"></i> <span>Listen</span>
+                </button>
                 <button id="downloadReportBtn" class="btn-icon-text btn-refresh">
-                    <i class="fas fa-download"></i> Download Report
+                    <i class="fas fa-download"></i> <span>Download</span>
                 </button>
             </div>
         </div>
@@ -239,7 +241,7 @@
                 <h2><i class="fas fa-calendar-alt"></i> <span id="yearlySummaryTitle">Year Summary</span></h2>
                 <span class="close" id="closeYearlyModal">&times;</span>
             </div>
-            <div id="yearlySummaryContent" class="report-content" style="padding: 1.5rem 0;"></div>
+            <div id="yearlySummaryContent" class="report-content" style="padding: 1rem 0;"></div>
         </div>
     </div>
 

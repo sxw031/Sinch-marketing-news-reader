@@ -10,6 +10,41 @@ const crypto = require('crypto');
 
 const VOICE = 'en-US-ChristopherNeural';
 
+// Possible edge-tts locations on Render/Linux
+const EDGE_TTS_PATHS = [
+  'edge-tts',
+  '/usr/local/bin/edge-tts',
+  '/opt/render/.local/bin/edge-tts',
+  path.join(os.homedir(), '.local/bin/edge-tts')
+];
+
+let edgeTtsPath = null;
+
+function findEdgeTts() {
+  if (edgeTtsPath) return edgeTtsPath;
+  const { execSync } = require('child_process');
+  for (const p of EDGE_TTS_PATHS) {
+    try {
+      if (p === 'edge-tts') {
+        execSync('which edge-tts', { timeout: 3000 });
+        edgeTtsPath = 'edge-tts';
+        return edgeTtsPath;
+      } else if (fs.existsSync(p)) {
+        edgeTtsPath = p;
+        return edgeTtsPath;
+      }
+    } catch (e) { /* continue */ }
+  }
+  // Try pip install as last resort
+  try {
+    execSync('pip3 install edge-tts --quiet', { timeout: 30000 });
+    edgeTtsPath = 'edge-tts';
+    return edgeTtsPath;
+  } catch (e) {
+    throw new Error('edge-tts not found. Install with: pip3 install edge-tts');
+  }
+}
+
 /**
  * Generate speech audio using edge-tts Python CLI
  * @param {string} text - Text to synthesize
@@ -46,7 +81,8 @@ async function generateSpeech(text, options = {}) {
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('TTS timeout after 60s')), 60000);
 
-      execFile('edge-tts', [
+      const ttsCmd = findEdgeTts();
+      execFile(ttsCmd, [
         '--file', textFile,
         '--voice', voice,
         '--write-media', outputFile

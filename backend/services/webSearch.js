@@ -6,6 +6,51 @@ const parser = new Parser({
   headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
 });
 
+// --- Login-wall domains to filter out ---
+const LOGIN_WALL_DOMAINS = [
+  'linkedin.com/pulse', 'linkedin.com/posts',
+  'ft.com', 'wsj.com', 'bloomberg.com/news',
+  'economist.com', 'hbr.org',
+  'seekingalpha.com', 'barrons.com',
+  'nytimes.com', 'washingtonpost.com',
+  'paywallninja.com'
+];
+
+function isLoginWall(url) {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return LOGIN_WALL_DOMAINS.some(domain => lower.includes(domain));
+}
+
+// --- Source categorization for cleaner display ---
+const SOURCE_CATEGORIES = {
+  'Reuters': 'Major Media',
+  'AP News': 'Major Media',
+  'BBC': 'Major Media',
+  'CNBC': 'Major Media',
+  'CNN': 'Major Media',
+  'Bloomberg': 'Financial',
+  'Financial Times': 'Financial',
+  'The Wall Street Journal': 'Financial',
+  'Yahoo Finance': 'Financial',
+  'MarketWatch': 'Financial',
+  'TechCrunch': 'Tech & Industry',
+  'The Verge': 'Tech & Industry',
+  'Wired': 'Tech & Industry',
+  'Ars Technica': 'Tech & Industry',
+  'ZDNet': 'Tech & Industry',
+  'LinkedIn': 'Professional',
+  'Official Website': 'Official'
+};
+
+function categorizeSource(source) {
+  if (!source) return 'Other';
+  for (const [name, category] of Object.entries(SOURCE_CATEGORIES)) {
+    if (source.toLowerCase().includes(name.toLowerCase())) return category;
+  }
+  return 'News';
+}
+
 // --- Source 1: Google News RSS (Primary, most reliable) ---
 async function fetchGoogleNewsRSS(company, options = {}) {
   const limit = options.limit || 10;
@@ -20,21 +65,24 @@ async function fetchGoogleNewsRSS(company, options = {}) {
     });
 
     const feed = await parser.parseString(response.data);
-    const articles = (feed.items || []).slice(0, limit).map(item => {
-      const titleParts = (item.title || '').split(' - ');
-      const source = titleParts.length > 1 ? titleParts.pop().trim() : 'Google News';
-      const title = titleParts.join(' - ').trim();
+    const articles = (feed.items || []).slice(0, limit)
+      .filter(item => !isLoginWall(item.link))
+      .map(item => {
+        const titleParts = (item.title || '').split(' - ');
+        const source = titleParts.length > 1 ? titleParts.pop().trim() : 'Google News';
+        const title = titleParts.join(' - ').trim();
 
-      return {
-        title: title || item.title,
-        description: item.contentSnippet || item.content || '',
-        url: item.link || '',
-        source,
-        company,
-        category: 'General',
-        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
-      };
-    });
+        return {
+          title: title || item.title,
+          description: item.contentSnippet || item.content || '',
+          url: item.link || '',
+          source,
+          sourceCategory: categorizeSource(source),
+          company,
+          category: 'General',
+          publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+        };
+      });
 
     console.log(`[Google News] ${company}: found ${articles.length} articles`);
     return articles;
@@ -58,15 +106,18 @@ async function fetchBingNewsRSS(company, options = {}) {
     });
 
     const feed = await parser.parseString(response.data);
-    const articles = (feed.items || []).slice(0, limit).map(item => ({
-      title: item.title || 'Untitled',
-      description: item.contentSnippet || item.content || '',
-      url: item.link || '',
-      source: item.creator || 'Bing News',
-      company,
-      category: 'General',
-      publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
-    }));
+    const articles = (feed.items || []).slice(0, limit)
+      .filter(item => !isLoginWall(item.link))
+      .map(item => ({
+        title: item.title || 'Untitled',
+        description: item.contentSnippet || item.content || '',
+        url: item.link || '',
+        source: item.creator || 'Bing News',
+        sourceCategory: categorizeSource(item.creator || 'Bing News'),
+        company,
+        category: 'General',
+        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+      }));
 
     console.log(`[Bing RSS] ${company}: found ${articles.length} articles`);
     return articles;
@@ -79,7 +130,8 @@ async function fetchBingNewsRSS(company, options = {}) {
 // --- Source 3: LinkedIn News (via Google News RSS search) ---
 async function fetchLinkedInNews(company, options = {}) {
   const limit = options.limit || 5;
-  const query = encodeURIComponent(`"${company}" site:linkedin.com`);
+  // Search for LinkedIn articles about the company but filter out login-required posts
+  const query = encodeURIComponent(`"${company}" site:linkedin.com/news OR site:linkedin.com/business`);
   const url = `https://news.google.com/rss/search?q=${query}&hl=en&gl=US&ceid=US:en`;
 
   try {
@@ -90,21 +142,28 @@ async function fetchLinkedInNews(company, options = {}) {
     });
 
     const feed = await parser.parseString(response.data);
-    const articles = (feed.items || []).slice(0, limit).map(item => {
-      const titleParts = (item.title || '').split(' - ');
-      titleParts.pop(); // Remove source suffix
-      const title = titleParts.join(' - ').trim() || item.title;
+    const articles = (feed.items || []).slice(0, limit)
+      .filter(item => {
+        // Only keep LinkedIn articles that don't require login
+        const url = (item.link || '').toLowerCase();
+        return !url.includes('/pulse/') && !url.includes('/posts/');
+      })
+      .map(item => {
+        const titleParts = (item.title || '').split(' - ');
+        titleParts.pop();
+        const title = titleParts.join(' - ').trim() || item.title;
 
-      return {
-        title,
-        description: item.contentSnippet || item.content || '',
-        url: item.link || '',
-        source: 'LinkedIn',
-        company,
-        category: 'General',
-        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
-      };
-    });
+        return {
+          title,
+          description: item.contentSnippet || item.content || '',
+          url: item.link || '',
+          source: 'LinkedIn',
+          sourceCategory: 'Professional',
+          company,
+          category: 'General',
+          publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+        };
+      });
 
     console.log(`[LinkedIn] ${company}: found ${articles.length} articles`);
     return articles;
@@ -114,26 +173,26 @@ async function fetchLinkedInNews(company, options = {}) {
   }
 }
 
-// --- Source 4: Official Website News (via Google News RSS search) ---
+// --- Source 4: Official Website News (via Google search for news/blog/resources pages) ---
 const COMPANY_DOMAINS = {
-  'HSBC': 'hsbc.com',
-  'Grab': 'grab.com',
-  'Vodafone': 'vodafone.com',
-  'Cathay Pacific': 'cathaypacific.com',
-  'Alibaba': 'alibaba.com OR alizila.com',
-  'Standard Chartered': 'sc.com',
+  'HSBC': 'hsbc.com/news',
+  'Grab': 'grab.com/press OR grab.com/blog',
+  'Vodafone': 'vodafone.com/news',
+  'Cathay Pacific': 'cathaypacific.com OR news.cathaypacific.com',
+  'Alibaba': 'alizila.com',
+  'Standard Chartered': 'sc.com/en/media',
   'Temu': 'temu.com',
-  'Ctrip': 'trip.com',
-  'Didi': 'didiglobal.com',
-  'DBS': 'dbs.com',
-  'Tencent': 'tencent.com',
-  'Bank of China': 'boc.cn',
-  'ByteDance': 'bytedance.com',
-  'Gojek': 'gojek.com',
-  'Citigroup': 'citigroup.com',
-  'Binance': 'binance.com',
-  'ShopBack': 'shopback.com',
-  'Aeon Credit': 'aeoncredit.com.my'
+  'Ctrip': 'trip.com/newsroom OR trip.com/blog',
+  'Didi': 'didiglobal.com/news OR didiglobal.com/blog',
+  'DBS': 'dbs.com/newsroom',
+  'Tencent': 'tencent.com/en-us/media',
+  'Bank of China': 'boc.cn/en/aboutboc',
+  'ByteDance': 'bytedance.com/en/news',
+  'Gojek': 'gojek.com/blog OR gotocompany.com/news',
+  'Citigroup': 'citigroup.com/global/news',
+  'Binance': 'binance.com/en/blog',
+  'ShopBack': 'shopback.com/blog OR corporate.shopback.com',
+  'Aeon Credit': 'aeoncredit.com.my/news'
 };
 
 async function fetchOfficialWebsiteNews(company, options = {}) {
@@ -152,21 +211,24 @@ async function fetchOfficialWebsiteNews(company, options = {}) {
     });
 
     const feed = await parser.parseString(response.data);
-    const articles = (feed.items || []).slice(0, limit).map(item => {
-      const titleParts = (item.title || '').split(' - ');
-      titleParts.pop();
-      const title = titleParts.join(' - ').trim() || item.title;
+    const articles = (feed.items || []).slice(0, limit)
+      .filter(item => !isLoginWall(item.link))
+      .map(item => {
+        const titleParts = (item.title || '').split(' - ');
+        titleParts.pop();
+        const title = titleParts.join(' - ').trim() || item.title;
 
-      return {
-        title,
-        description: item.contentSnippet || item.content || '',
-        url: item.link || '',
-        source: 'Official Website',
-        company,
-        category: 'General',
-        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
-      };
-    });
+        return {
+          title,
+          description: item.contentSnippet || item.content || '',
+          url: item.link || '',
+          source: 'Official Website',
+          sourceCategory: 'Official',
+          company,
+          category: 'General',
+          publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
+        };
+      });
 
     console.log(`[Official] ${company}: found ${articles.length} articles`);
     return articles;
@@ -201,4 +263,4 @@ async function fetchNewsForCompany(company) {
   return unique;
 }
 
-module.exports = { fetchNewsForCompany, fetchGoogleNewsRSS, fetchBingNewsRSS, fetchLinkedInNews, fetchOfficialWebsiteNews };
+module.exports = { fetchNewsForCompany, fetchGoogleNewsRSS, fetchBingNewsRSS, fetchLinkedInNews, fetchOfficialWebsiteNews, categorizeSource };
