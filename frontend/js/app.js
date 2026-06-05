@@ -672,18 +672,7 @@ function renderMarkdown(md) {
       tableRows.push(line);
     } else {
       if (inTable) {
-        // Render collected table
-        let tableHtml = '<table>';
-        tableRows.forEach((row, idx) => {
-          const cells = row.split('|').filter(c => c.trim() !== '');
-          const tag = idx === 0 ? 'th' : 'td';
-          const rowTag = idx === 0 ? 'thead' : (idx === 1 ? 'tbody' : '');
-          if (idx === 0) tableHtml += '<thead>';
-          if (idx === 1) tableHtml += '</thead><tbody>';
-          tableHtml += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
-        });
-        tableHtml += '</tbody></table>';
-        processed.push(tableHtml);
+        processed.push(buildTable(tableRows));
         inTable = false;
         tableRows = [];
       }
@@ -691,42 +680,69 @@ function renderMarkdown(md) {
     }
   }
   if (inTable && tableRows.length) {
-    let tableHtml = '<table>';
-    tableRows.forEach((row, idx) => {
-      const cells = row.split('|').filter(c => c.trim() !== '');
-      const tag = idx === 0 ? 'th' : 'td';
-      if (idx === 0) tableHtml += '<thead>';
-      if (idx === 1) tableHtml += '</thead><tbody>';
-      tableHtml += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    processed.push(tableHtml);
+    processed.push(buildTable(tableRows));
   }
   
-  let html = processed.join('\n');
+  function buildTable(rows) {
+    if (rows.length === 0) return '';
+    const colCount = rows[0].split('|').filter(c => c.trim() !== '').length;
+    let html = '<div class="report-table-wrap"><table>';
+    rows.forEach((row, idx) => {
+      const cells = row.split('|').filter(c => c.trim() !== '');
+      // Pad cells if row has fewer columns
+      while (cells.length < colCount) cells.push('');
+      const tag = idx === 0 ? 'th' : 'td';
+      if (idx === 0) html += '<thead>';
+      if (idx === 1) html += '</thead><tbody>';
+      html += '<tr>' + cells.map(c => {
+        let content = c.trim();
+        // Apply inline bold within cells
+        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Apply inline italic within cells
+        content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        return `<${tag}>${content}</${tag}>`;
+      }).join('') + '</tr>';
+    });
+    if (rows.length > 1) html += '</tbody>';
+    html += '</table></div>';
+    return html;
+  }
   
-  // Headings
-  html = html.replace(/^### (.*$)/gim, '<h3 class="report-h3">$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2 class="report-h2">$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1 class="report-h1">$1</h1>');
-  // Blockquotes
-  html = html.replace(/^\> (.*$)/gim, '<blockquote class="report-quote">$1</blockquote>');
-  // Inline formatting
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  // Dividers
-  html = html.replace(/^---$/gim, '<hr class="report-divider">');
-  // List items
-  html = html.replace(/^[\*\-] (.*$)/gim, '<li>$1</li>');
+  // Process non-table lines only for markdown formatting
+  let html = processed.map(line => {
+    // Skip lines that are already HTML (tables)
+    if (line.startsWith('<div class="report-table-wrap">')) return line;
+    
+    // Headings
+    line = line.replace(/^### (.*$)/gim, '<h3 class="report-h3">$1</h3>');
+    line = line.replace(/^## (.*$)/gim, '<h2 class="report-h2">$1</h2>');
+    line = line.replace(/^# (.*$)/gim, '<h1 class="report-h1">$1</h1>');
+    // Blockquotes
+    line = line.replace(/^\> (.*$)/gim, '<blockquote class="report-quote">$1</blockquote>');
+    // Inline formatting
+    line = line.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Dividers
+    line = line.replace(/^---$/gim, '<hr class="report-divider">');
+    // List items
+    line = line.replace(/^[\*\-] (.*$)/gim, '<li>$1</li>');
+    // Images and links
+    line = line.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="report-img">');
+    line = line.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="report-link">$1</a>');
+    return line;
+  }).join('\n');
+  
   // Wrap consecutive <li> in <ul>
   html = html.replace(/(<li>.*?<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
-  // Images and links
-  html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" class="report-img">');
-  html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="report-link">$1</a>');
-  // Paragraphs
+  // Paragraphs - but protect table blocks
   html = html.replace(/\n\n/g, '</p><p>');
   html = html.replace(/\n/g, '<br>');
+  // Clean up: remove <br> and <p> wrapping around tables
+  html = html.replace(/<br><div class="report-table-wrap">/g, '<div class="report-table-wrap">');
+  html = html.replace(/<\/div><br>/g, '</div>');
+  html = html.replace(/<p><div class="report-table-wrap">/g, '<div class="report-table-wrap">');
+  html = html.replace(/<\/div><\/p>/g, '</div>');
   // Clean up empty paragraphs
   html = html.replace(/<p><\/p>/g, '');
   html = html.replace(/<p><br><\/p>/g, '');
