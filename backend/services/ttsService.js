@@ -1,6 +1,6 @@
 /**
  * TTS Service - Pure Node.js using msedge-tts package
- * No Python dependency - works on any Node.js environment including Render
+ * With retry logic and timeout for Render deployment
  */
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 const fs = require('fs');
@@ -10,12 +10,22 @@ const crypto = require('crypto');
 
 const VOICE = 'en-US-ChristopherNeural';
 const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3;
+const MAX_RETRIES = 3;
+const TTS_TIMEOUT = 30000; // 30 seconds timeout
 
 /**
- * Generate speech audio using msedge-tts (pure Node.js WebSocket)
- * @param {string} text - Text to synthesize
- * @param {object} options - Options (voice, maxLength)
- * @returns {Promise<Buffer>} - MP3 audio buffer
+ * Generate speech with timeout wrapper
+ */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`TTS timed out after ${ms}ms`)), ms);
+    promise.then(result => { clearTimeout(timer); resolve(result); })
+           .catch(err => { clearTimeout(timer); reject(err); });
+  });
+}
+
+/**
+ * Generate speech audio using msedge-tts with retry
  */
 async function generateSpeech(text, options = {}) {
   const voice = options.voice || VOICE;
@@ -36,55 +46,75 @@ async function generateSpeech(text, options = {}) {
     throw new Error('No text to synthesize');
   }
 
-  // Create temp directory for output
-  const tmpId = crypto.randomBytes(8).toString('hex');
-  const outputDir = path.join(os.tmpdir(), `tts_${tmpId}`);
-  fs.mkdirSync(outputDir, { recursive: true });
+  let lastError = null;
 
-  try {
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(voice, FORMAT);
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const tmpId = crypto.randomBytes(8).toString('hex');
+    const outputDir = path.join(os.tmpdir(), `tts_${tmpId}`);
+    fs.mkdirSync(outputDir, { recursive: true });
 
-    const result = await tts.toFile(outputDir, cleanText);
-    const audioPath = result.audioFilePath;
-
-    if (!audioPath || !fs.existsSync(audioPath)) {
-      throw new Error('TTS output file not created');
-    }
-
-    const audioBuffer = fs.readFileSync(audioPath);
-    if (audioBuffer.length < 100) {
-      throw new Error('TTS output file is too small');
-    }
-
-    console.log(`[TTS] Generated ${audioBuffer.length} bytes of audio`);
-    return audioBuffer;
-  } finally {
-    // Cleanup temp directory
     try {
-      const files = fs.readdirSync(outputDir);
-      files.forEach(f => fs.unlinkSync(path.join(outputDir, f)));
-      fs.rmdirSync(outputDir);
-    } catch (e) { /* ignore cleanup errors */ }
+      console.log(`[TTS] Attempt ${attempt}/${MAX_RETRIES} for ${cleanText.length} chars...`);
+      
+      const tts = new MsEdgeTTS();
+      await withTimeout(tts.setMetadata(voice, FORMAT), 10000);
+      const result = await withTimeout(tts.toFile(outputDir, cleanText), TTS_TIMEOUT);
+      
+      const audioPath = result && result.audioFilePath;
+      if (!audioPath || !fs.existsSync(audioPath)) {
+        throw new Error('TTS output file not created');
+      }
+
+      const audioBuffer = fs.readFileSync(audioPath);
+      if (audioBuffer.length < 100) {
+        throw new Error('TTS output file is too small');
+      }
+
+      console.log(`[TTS] Success: ${audioBuffer.length} bytes on attempt ${attempt}`);
+      
+      // Cleanup
+      try {
+        fs.readdirSync(outputDir).forEach(f => fs.unlinkSync(path.join(outputDir, f)));
+        fs.rmdirSync(outputDir);
+      } catch (e) { /* ignore */ }
+
+      return audioBuffer;
+    } catch (err) {
+      lastError = err;
+      console.error(`[TTS] Attempt ${attempt} failed:`, err.message || err);
+      
+      // Cleanup on failure
+      try {
+        if (fs.existsSync(outputDir)) {
+          fs.readdirSync(outputDir).forEach(f => fs.unlinkSync(path.join(outputDir, f)));
+          fs.rmdirSync(outputDir);
+        }
+      } catch (e) { /* ignore */ }
+
+      // Wait before retry (exponential backoff)
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
   }
+
+  throw new Error(`TTS failed after ${MAX_RETRIES} attempts: ${lastError ? lastError.message : 'unknown error'}`);
 }
 
 /**
  * Generate a podcast script from news articles (~3 minutes)
  * Focused on top 5 most Sinch-relevant news
- * Style: concise, conversational, slightly humorous, no repetition
+ * Style: concise, conversational, slightly humorous
  */
 function generatePodcastScript(news) {
   if (!news || news.length === 0) return null;
 
   const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
-  // Sinch relevance keywords for scoring
   const sinchKeywords = ['messaging', 'sms', 'communication', 'api', 'cloud', 'cpaas', 'digital', 'engagement',
     'notification', 'verification', 'authentication', 'omnichannel', 'customer experience', 'cx',
     'mobile', 'platform', 'partnership', 'expansion', 'enterprise', 'fintech', 'banking'];
 
-  // Score each article by Sinch relevance
   const scored = news.map(article => {
     const text = `${article.title} ${article.description || ''}`.toLowerCase();
     let score = 0;
@@ -93,79 +123,52 @@ function generatePodcastScript(news) {
     return { ...article, sinchScore: score };
   });
 
-  // Get top 5 most relevant
   const top5 = scored.sort((a, b) => b.sinchScore - a.sinchScore).slice(0, 5);
 
-  // Transition phrases for variety
-  const transitions = [
-    'Next up,',
-    'Moving on,',
-    'Here\'s an interesting one.',
-    'And this caught my eye.',
-    'Last but not least,'
-  ];
+  const transitions = ['Next up,', 'Moving on,', 'Here is an interesting one.', 'And this caught my eye.', 'Last but not least,'];
 
-  // Sinch angle phrases - varied and concise
   const sinchAngles = {
-    messaging: [
-      'That\'s right in Sinch\'s wheelhouse.',
-      'Classic messaging play, right up our alley.',
-      'If that doesn\'t scream Sinch opportunity, I don\'t know what does.'
-    ],
-    digital: [
-      'Digital transformation means new communication needs. You know what that means for us.',
-      'Where there\'s platform investment, there\'s API demand.',
-      'Another company going digital, another reason to pick up the phone.'
-    ],
-    expansion: [
-      'New markets, new messaging needs. Time to reach out.',
-      'Expansion usually means they\'ll need to talk to more customers. We can help with that.',
-      'Growth mode activated. Perfect time for a Sinch conversation.'
-    ]
+    messaging: ['That is right in Sinch wheelhouse.', 'Classic messaging play, right up our alley.', 'If that does not scream Sinch opportunity, I do not know what does.'],
+    digital: ['Digital transformation means new communication needs. You know what that means for us.', 'Where there is platform investment, there is API demand.', 'Another company going digital, another reason to pick up the phone.'],
+    expansion: ['New markets, new messaging needs. Time to reach out.', 'Expansion usually means they will need to talk to more customers. We can help with that.', 'Growth mode activated. Perfect time for a Sinch conversation.']
   };
 
   let script = `Hey there, welcome to your MarketFeed Briefing for ${date}. `;
-  script += `I'm Christopher, your daily dose of strategic intel. Got five stories for you today, let's dive in.\n\n`;
+  script += `I am Christopher, your daily dose of strategic intel. Got five stories for you today, let us dive in.\n\n`;
 
   top5.forEach((article, idx) => {
-    // Use transition phrase
     if (idx === 0) {
       script += `Number one. `;
     } else {
-      script += `${transitions[idx]}  `;
+      script += `${transitions[idx]} `;
     }
 
-    // Combine title and description into one concise summary instead of reading both
-    const title = article.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
-    const desc = (article.description || '').replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
+    const title = article.title.replace(/[|–—'"]/g, ' ').replace(/\s+/g, ' ').trim();
+    const desc = (article.description || '').replace(/[|–—'"]/g, ' ').replace(/\s+/g, ' ').trim();
 
-    // If description adds meaningful new info beyond the title, blend them; otherwise just use title
     const titleWords = new Set(title.toLowerCase().split(/\s+/));
     const descWords = desc.toLowerCase().split(/\s+/);
     const newInfoInDesc = descWords.filter(w => w.length > 4 && !titleWords.has(w)).length;
 
     script += `${article.company}: ${title}. `;
 
-    // Only add description snippet if it has substantial new info (not repeating the title)
     if (desc.length > 50 && newInfoInDesc > 5) {
       const shortDesc = desc.substring(0, 120).replace(/\s\S*$/, '');
       script += `In short, ${shortDesc}. `;
     }
 
-    // Add concise Sinch angle with variety
     const text = `${article.title} ${article.description || ''}`.toLowerCase();
     if (text.includes('messaging') || text.includes('sms') || text.includes('communication')) {
-      script += sinchAngles.messaging[idx % sinchAngles.messaging.length] + ' ';
+      script += sinchAngles.messaging[idx % 3] + ' ';
     } else if (text.includes('digital') || text.includes('platform') || text.includes('api')) {
-      script += sinchAngles.digital[idx % sinchAngles.digital.length] + ' ';
+      script += sinchAngles.digital[idx % 3] + ' ';
     } else if (text.includes('expansion') || text.includes('partnership') || text.includes('launch')) {
-      script += sinchAngles.expansion[idx % sinchAngles.expansion.length] + ' ';
+      script += sinchAngles.expansion[idx % 3] + ' ';
     }
     script += '\n\n';
   });
 
-  // Closing - concise with a touch of humor
-  script += `And that's your top five. `;
+  script += `And that is your top five. `;
   script += `Quick reminder: the best CSM conversations start with, hey I saw this news about your company. Simple, but it works every time. `;
   script += `Alright, go crush it today. See you tomorrow on MarketFeed!`;
 
@@ -186,9 +189,9 @@ function generateReportScript(reportText) {
   lines.forEach(line => {
     if (line.startsWith('#')) {
       if (currentSection) sections.push(currentSection);
-      const title = line.replace(/^#+\s*/, '').replace(/[*_#🚀🤝💰💻⚠️🎯📊🏢📋]/g, '').trim();
+      const title = line.replace(/^#+\s*/, '').replace(/[*_#]/g, '').trim();
       currentSection = { title, content: [] };
-    } else if (currentSection && line.trim() && !line.startsWith('!') && !line.startsWith('[') && !line.startsWith('>') && !line.startsWith('---')) {
+    } else if (currentSection && line.trim() && !line.startsWith('!') && !line.startsWith('[') && !line.startsWith('>') && !line.startsWith('---') && !line.includes('|')) {
       const clean = line.replace(/[*_#\[\]()>|]/g, '').replace(/https?:\/\/\S+/g, '').trim();
       if (clean.length > 10) currentSection.content.push(clean);
     }

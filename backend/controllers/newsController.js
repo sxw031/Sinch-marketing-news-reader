@@ -1,5 +1,5 @@
 const { aggregateAllNews, getNews, getNewsCount, getAvailableCompanies, getSources } = require('../services/newsAggregator');
-const { generateHeuristicReport, generateYearlySummary } = require('../services/strategyEngine');
+const { generateYearlySummary } = require('../services/strategyEngine');
 const { generateSpeech, generatePodcastScript, generateReportScript } = require('../services/ttsService');
 const { COMPANIES } = require('../config/sources');
 
@@ -87,7 +87,7 @@ function getAggregationStatus(req, res) {
 }
 
 /**
- * Podcast generation - uses Edge TTS (free, no API key needed)
+ * Podcast generation - uses Edge TTS with retry
  */
 async function getPodcast(req, res) {
   try {
@@ -103,7 +103,7 @@ async function getPodcast(req, res) {
 
     console.log(`[Podcast] Generating audio for ${script.length} chars...`);
     const audioBuffer = await generateSpeech(script);
-    
+
     res.set({
       'Content-Type': 'audio/mpeg',
       'Content-Length': audioBuffer.length,
@@ -111,8 +111,9 @@ async function getPodcast(req, res) {
     });
     res.send(audioBuffer);
   } catch (error) {
-    console.error('[Podcast] Error:', error.message);
-    res.status(500).json({ success: false, error: `Podcast generation failed: ${error.message}` });
+    const errMsg = error instanceof Error ? error.message : String(error || 'Unknown TTS error');
+    console.error('[Podcast] Error:', errMsg, error?.stack || '');
+    res.status(500).json({ success: false, error: `Podcast generation failed: ${errMsg}. TTS service may be temporarily unavailable. Please try again in a moment.` });
   }
 }
 
@@ -131,34 +132,18 @@ async function getReportSpeech(req, res) {
 
     console.log(`[ReportSpeech] Generating audio for ${script.length} chars...`);
     const audioBuffer = await generateSpeech(script);
-    
+
     res.set({ 'Content-Type': 'audio/mpeg', 'Content-Length': audioBuffer.length });
     res.send(audioBuffer);
   } catch (error) {
-    console.error('[ReportSpeech] Error:', error.message);
-    res.status(500).json({ success: false, error: error.message });
+    const errMsg = error instanceof Error ? error.message : String(error || 'Unknown TTS error');
+    console.error('[ReportSpeech] Error:', errMsg, error?.stack || '');
+    res.status(500).json({ success: false, error: `Report speech failed: ${errMsg}` });
   }
 }
 
 /**
- * AI Strategy Report - heuristic engine
- */
-async function generateStrategy(req, res) {
-  try {
-    const { news } = req.body;
-    if (!news || news.length === 0) {
-      return res.json({ success: true, report: generateHeuristicReport([]) });
-    }
-    const report = generateHeuristicReport(news);
-    res.json({ success: true, report });
-  } catch (error) {
-    console.error('[Strategy]', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-
-/**
- * Yearly Summary - generates a summary of major events for a given year
+ * Yearly Summary
  */
 async function getYearlySummary(req, res) {
   try {
@@ -176,54 +161,8 @@ async function getYearlySummary(req, res) {
 }
 
 /**
- * AI Chat - heuristic-based Q&A
+ * Debug stats
  */
-async function aiChat(req, res) {
-  try {
-    const { query: q, context } = req.body;
-    if (!q) return res.status(400).json({ success: false, error: 'No query provided' });
-
-    // Simple keyword-based answer generation
-    const answer = generateChatAnswer(q, context || []);
-    res.json({ success: true, answer });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-
-function generateChatAnswer(question, context) {
-  const q = question.toLowerCase();
-  const companies = COMPANIES.map(c => c.name);
-  const mentionedCompany = companies.find(c => q.includes(c.toLowerCase()));
-
-  if (context.length === 0) {
-    return 'I don\'t have enough news data to answer your question yet. Please wait for the sync to complete or try refreshing.';
-  }
-
-  if (mentionedCompany) {
-    const companyNews = context.filter(n => n.company === mentionedCompany);
-    if (companyNews.length > 0) {
-      const headlines = companyNews.slice(0, 3).map(n => `• ${n.title}`).join('\n');
-      return `Here's what I found about **${mentionedCompany}**:\n\n${headlines}\n\nBased on ${companyNews.length} recent articles, ${mentionedCompany} appears to be active in the news. For a deeper analysis, try generating a Strategy Report.`;
-    }
-    return `I don't have recent news about ${mentionedCompany} in the current view. Try expanding the time range or refreshing.`;
-  }
-
-  if (q.includes('trend') || q.includes('summary') || q.includes('overview')) {
-    const companyCount = [...new Set(context.map(n => n.company))].length;
-    return `Currently tracking ${context.length} articles across ${companyCount} companies. The most active companies are: ${[...new Set(context.slice(0, 10).map(n => n.company))].join(', ')}. Generate a Strategy Report for detailed insights.`;
-  }
-
-  if (q.includes('sinch') || q.includes('opportunity') || q.includes('csm')) {
-    const strategic = context.filter(n => n.category === 'Strategic Insights');
-    if (strategic.length > 0) {
-      return `I found ${strategic.length} strategic signals that may be relevant for Sinch CSM outreach:\n\n${strategic.slice(0, 3).map(n => `• **${n.company}**: ${n.title}`).join('\n')}\n\nThese indicate potential engagement opportunities. Generate a Strategy Report for actionable recommendations.`;
-    }
-  }
-
-  return `Based on the ${context.length} articles currently loaded, here are the top headlines:\n\n${context.slice(0, 5).map(n => `• **${n.company}**: ${n.title}`).join('\n')}\n\nAsk me about a specific company or try "What are the trends?"`;
-}
-
 async function getDebugStats(req, res) {
   try {
     const count = await getNewsCount();
@@ -248,8 +187,6 @@ module.exports = {
   getAggregationStatus,
   getPodcast,
   getReportSpeech,
-  generateStrategy,
   getYearlySummary,
-  aiChat,
   getDebugStats
 };
