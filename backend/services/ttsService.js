@@ -1,52 +1,18 @@
 /**
- * TTS Service - Uses Python edge-tts CLI (most reliable, free, no API key)
- * Falls back gracefully if edge-tts is not installed
+ * TTS Service - Pure Node.js using msedge-tts package
+ * No Python dependency - works on any Node.js environment including Render
  */
-const { execFile } = require('child_process');
+const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
 const VOICE = 'en-US-ChristopherNeural';
-
-// Possible edge-tts locations on Render/Linux
-const EDGE_TTS_PATHS = [
-  'edge-tts',
-  '/usr/local/bin/edge-tts',
-  '/opt/render/.local/bin/edge-tts',
-  path.join(os.homedir(), '.local/bin/edge-tts')
-];
-
-let edgeTtsPath = null;
-
-function findEdgeTts() {
-  if (edgeTtsPath) return edgeTtsPath;
-  const { execSync } = require('child_process');
-  for (const p of EDGE_TTS_PATHS) {
-    try {
-      if (p === 'edge-tts') {
-        execSync('which edge-tts', { timeout: 3000 });
-        edgeTtsPath = 'edge-tts';
-        return edgeTtsPath;
-      } else if (fs.existsSync(p)) {
-        edgeTtsPath = p;
-        return edgeTtsPath;
-      }
-    } catch (e) { /* continue */ }
-  }
-  // Try pip install as last resort
-  try {
-    execSync('pip3 install edge-tts --quiet', { timeout: 30000 });
-    edgeTtsPath = 'edge-tts';
-    return edgeTtsPath;
-  } catch (e) {
-    throw new Error('edge-tts not found. Install with: pip3 install edge-tts');
-  }
-}
+const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3;
 
 /**
- * Generate speech audio using edge-tts Python CLI
+ * Generate speech audio using msedge-tts (pure Node.js WebSocket)
  * @param {string} text - Text to synthesize
  * @param {object} options - Options (voice, maxLength)
  * @returns {Promise<Buffer>} - MP3 audio buffer
@@ -70,96 +36,92 @@ async function generateSpeech(text, options = {}) {
     throw new Error('No text to synthesize');
   }
 
-  // Write text to a temp file to avoid shell escaping issues
+  // Create temp directory for output
   const tmpId = crypto.randomBytes(8).toString('hex');
-  const textFile = path.join(os.tmpdir(), `tts_input_${tmpId}.txt`);
-  const outputFile = path.join(os.tmpdir(), `tts_output_${tmpId}.mp3`);
+  const outputDir = path.join(os.tmpdir(), `tts_${tmpId}`);
+  fs.mkdirSync(outputDir, { recursive: true });
 
   try {
-    fs.writeFileSync(textFile, cleanText, 'utf8');
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(voice, FORMAT);
 
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('TTS timeout after 60s')), 60000);
+    const result = await tts.toFile(outputDir, cleanText);
+    const audioPath = result.audioFilePath;
 
-      const ttsCmd = findEdgeTts();
-      execFile(ttsCmd, [
-        '--file', textFile,
-        '--voice', voice,
-        '--write-media', outputFile
-      ], { timeout: 60000 }, (error, stdout, stderr) => {
-        clearTimeout(timeout);
-        if (error) {
-          reject(new Error(`edge-tts failed: ${error.message}`));
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    // Read the generated MP3
-    if (!fs.existsSync(outputFile)) {
+    if (!audioPath || !fs.existsSync(audioPath)) {
       throw new Error('TTS output file not created');
     }
 
-    const audioBuffer = fs.readFileSync(outputFile);
+    const audioBuffer = fs.readFileSync(audioPath);
     if (audioBuffer.length < 100) {
       throw new Error('TTS output file is too small');
     }
 
+    console.log(`[TTS] Generated ${audioBuffer.length} bytes of audio`);
     return audioBuffer;
   } finally {
-    // Cleanup temp files
-    try { fs.unlinkSync(textFile); } catch (e) {}
-    try { fs.unlinkSync(outputFile); } catch (e) {}
+    // Cleanup temp directory
+    try {
+      const files = fs.readdirSync(outputDir);
+      files.forEach(f => fs.unlinkSync(path.join(outputDir, f)));
+      fs.rmdirSync(outputDir);
+    } catch (e) { /* ignore cleanup errors */ }
   }
 }
 
 /**
  * Generate a podcast script from news articles (~3 minutes)
+ * Focused on top 5 most Sinch-relevant news
  */
 function generatePodcastScript(news) {
   if (!news || news.length === 0) return null;
 
   const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  const companies = [...new Set(news.map(n => n.company))];
 
-  let script = `Good morning and welcome to your MarketFeed Strategic Briefing for ${date}. `;
-  script += `I'm your host, and today we're covering key developments across ${companies.length} companies in the Asia-Pacific and global markets. Let's dive right in.\n\n`;
+  // Sinch relevance keywords for scoring
+  const sinchKeywords = ['messaging', 'sms', 'communication', 'api', 'cloud', 'cpaas', 'digital', 'engagement',
+    'notification', 'verification', 'authentication', 'omnichannel', 'customer experience', 'cx',
+    'mobile', 'platform', 'partnership', 'expansion', 'enterprise', 'fintech', 'banking'];
 
-  // Group by company and pick top stories
-  const grouped = {};
-  news.forEach(n => {
-    if (!grouped[n.company]) grouped[n.company] = [];
-    grouped[n.company].push(n);
+  // Score each article by Sinch relevance
+  const scored = news.map(article => {
+    const text = `${article.title} ${article.description || ''}`.toLowerCase();
+    let score = 0;
+    sinchKeywords.forEach(kw => { if (text.includes(kw)) score += 2; });
+    if (text.includes('sinch')) score += 10;
+    return { ...article, sinchScore: score };
   });
 
-  // Cover top 8 companies with most news for a ~3 min podcast
-  const topCompanies = Object.entries(grouped)
-    .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 8);
+  // Get top 5 most relevant
+  const top5 = scored.sort((a, b) => b.sinchScore - a.sinchScore).slice(0, 5);
 
-  topCompanies.forEach(([company, articles], idx) => {
-    const topArticle = articles[0];
+  let script = `Good morning and welcome to your MarketFeed Strategic Briefing for ${date}. `;
+  script += `I'm Christopher, and today I'm bringing you the top five stories most relevant to Sinch's enterprise communications business. Let's get started.\n\n`;
+
+  top5.forEach((article, idx) => {
     script += `Story number ${idx + 1}. `;
-    script += `${company} is making headlines today. `;
-    const title = topArticle.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
+    script += `From ${article.company}. `;
+    const title = article.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
     script += `${title}. `;
-    if (topArticle.description) {
-      const desc = topArticle.description.substring(0, 200).replace(/[|–—]/g, ',').trim();
+    if (article.description) {
+      const desc = article.description.substring(0, 250).replace(/[|–—]/g, ',').trim();
       if (desc.length > 30) script += `${desc}. `;
     }
-    if (articles.length > 1) {
-      const second = articles[1];
-      const title2 = second.title.replace(/[|–—]/g, ',').replace(/\s+/g, ' ').trim();
-      script += `Additionally, ${title2}. `;
+    // Add Sinch angle
+    const text = `${article.title} ${article.description || ''}`.toLowerCase();
+    if (text.includes('messaging') || text.includes('sms') || text.includes('communication')) {
+      script += `This directly relates to Sinch's core messaging and communications platform capabilities. `;
+    } else if (text.includes('digital') || text.includes('platform') || text.includes('api')) {
+      script += `This signals potential opportunities for Sinch's API and platform solutions. `;
+    } else if (text.includes('expansion') || text.includes('partnership') || text.includes('launch')) {
+      script += `This could open doors for Sinch partnership discussions with the ${article.company} team. `;
     }
     script += '\n\n';
   });
 
-  script += `That wraps up today's strategic briefing from MarketFeed. `;
-  script += `Remember, staying informed means staying ahead of the competition. `;
-  script += `For Sinch customer success managers, these developments represent potential engagement opportunities with your enterprise clients. `;
-  script += `We'll see you next time. Have a great day.`;
+  script += `That concludes today's top five strategic stories for Sinch customer success managers. `;
+  script += `Key takeaway: stay close to your enterprise clients during periods of digital transformation, as these moments create the strongest upsell opportunities. `;
+  script += `Have a productive day, and we'll see you next time on MarketFeed.`;
 
   return script;
 }

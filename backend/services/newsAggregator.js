@@ -163,8 +163,15 @@ async function getNews(filters = {}) {
   }
 
   if (filters.search) {
-    sql += ' AND (title LIKE ? OR description LIKE ?)';
-    params.push(`%${filters.search}%`, `%${filters.search}%`);
+    // Fuzzy search: tokenize by spaces, each token must match in title OR description
+    const tokens = filters.search.trim().split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length > 0) {
+      const tokenClauses = tokens.map(token => {
+        params.push(`%${token}%`, `%${token}%`);
+        return '(title LIKE ? OR description LIKE ?)';
+      });
+      sql += ` AND (${tokenClauses.join(' AND ')})`;
+    }
   }
 
   // Sort support

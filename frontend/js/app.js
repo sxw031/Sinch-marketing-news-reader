@@ -330,8 +330,8 @@ function setupEventListeners() {
       btn.classList.add('active');
       const now = new Date();
       switch (range) {
+        case '1h': now.setHours(now.getHours() - 1); break;
         case '6h': now.setHours(now.getHours() - 6); break;
-        case '12h': now.setHours(now.getHours() - 12); break;
         case '24h': now.setHours(now.getHours() - 24); break;
         case '48h': now.setHours(now.getHours() - 48); break;
         case '72h': now.setHours(now.getHours() - 72); break;

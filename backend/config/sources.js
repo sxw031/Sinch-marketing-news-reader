@@ -92,7 +92,7 @@ const COMPANIES = [
     name: 'Bank of China',
     domain: 'boc.cn',
     category: 'Finance',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Bank_of_China_logo.svg/200px-Bank_of_China_logo.svg.png',
+    logoUrl: 'https://logo-teka.com/wp-content/uploads/2026/01/bank-of-china-logo.svg',
     website: { url: 'https://www.boc.cn/en/aboutboc/ab1/index.html' }
   },
   {
@@ -100,7 +100,7 @@ const COMPANIES = [
     name: 'ByteDance',
     domain: 'bytedance.com',
     category: 'Technology',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/ByteDance_logo.svg/200px-ByteDance_logo.svg.png',
+    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/07/ByteDance_logo.png',
     website: { url: 'https://www.bytedance.com/en/news' }
   },
   {
