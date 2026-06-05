@@ -175,9 +175,142 @@ function determineUrgency(articles) {
 }
 
 /**
- * Generate heuristic strategy report with CSM actionable reminders
+ * Generate period-specific strategy report header and framing
  */
-function generateHeuristicReport(newsArticles) {
+function getPeriodContext(period) {
+  const now = new Date();
+  switch (period) {
+    case 'weekly':
+      return {
+        label: 'Weekly Strategic Review',
+        timeframe: 'Past 7 Days',
+        refreshNote: 'Next refresh recommended: Monday morning',
+        focusNote: 'Focus on immediate action items and short-term engagement windows.',
+        daysBack: 7
+      };
+    case 'monthly':
+      return {
+        label: 'Monthly Strategic Assessment',
+        timeframe: 'Past 30 Days',
+        refreshNote: 'Next refresh recommended: 1st of next month',
+        focusNote: 'Focus on emerging patterns, pipeline development, and QBR preparation.',
+        daysBack: 30
+      };
+    case 'quarterly':
+      return {
+        label: 'Quarterly Business Review Intelligence',
+        timeframe: 'Past 90 Days',
+        refreshNote: 'Next refresh recommended: end of quarter',
+        focusNote: 'Focus on strategic account planning, executive engagement, and long-term opportunity mapping.',
+        daysBack: 90
+      };
+    default: // daily
+      return {
+        label: 'Daily Strategic Briefing',
+        timeframe: 'Past 24 Hours',
+        refreshNote: 'Next refresh recommended in 24 hours',
+        focusNote: 'Focus on time-sensitive signals and immediate outreach opportunities.',
+        daysBack: 1
+      };
+  }
+}
+
+/**
+ * Generate trend analysis for longer-period reports
+ */
+function generateTrendAnalysis(newsArticles, period) {
+  if (period === 'daily') return '';
+
+  const companies = {};
+  const weekBuckets = {};
+  const themes = { messaging: 0, digital: 0, expansion: 0, financial: 0, partnership: 0, risk: 0 };
+
+  newsArticles.forEach(article => {
+    // Count per company
+    companies[article.company] = (companies[article.company] || 0) + 1;
+
+    // Theme detection
+    const text = ((article.title || '') + ' ' + (article.description || '')).toLowerCase();
+    if (text.match(/messaging|sms|rcs|notification|communication/)) themes.messaging++;
+    if (text.match(/digital|platform|api|cloud|ai|automation/)) themes.digital++;
+    if (text.match(/expand|launch|new market|growth|scale/)) themes.expansion++;
+    if (text.match(/revenue|profit|earnings|funding|ipo/)) themes.financial++;
+    if (text.match(/partner|collaboration|alliance|deal|agreement/)) themes.partnership++;
+    if (text.match(/layoff|decline|loss|breach|fine|regulatory/)) themes.risk++;
+
+    // Week bucketing
+    const d = new Date(article.publishedAt);
+    const weekKey = `W${getWeekNumber(d)}`;
+    weekBuckets[weekKey] = (weekBuckets[weekKey] || 0) + 1;
+  });
+
+  let analysis = `\n---\n\n## 📈 **Trend Analysis (${period})**\n\n`;
+
+  // Top movers
+  const sorted = Object.entries(companies).sort((a, b) => b[1] - a[1]);
+  analysis += `### Most Active Accounts\n`;
+  analysis += `| Rank | Company | Signals | Activity Level |\n|------|---------|---------|----------------|\n`;
+  sorted.slice(0, 8).forEach(([co, count], i) => {
+    const level = count >= 10 ? '🔥 Very High' : count >= 5 ? '⚡ High' : count >= 3 ? '📊 Moderate' : '📌 Low';
+    analysis += `| ${i + 1} | ${co} | ${count} | ${level} |\n`;
+  });
+
+  // Theme breakdown
+  analysis += `\n### Dominant Themes\n`;
+  const sortedThemes = Object.entries(themes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const themeIcons = { messaging: '💬', digital: '💻', expansion: '🚀', financial: '💰', partnership: '🤝', risk: '⚠️' };
+  sortedThemes.forEach(([theme, count]) => {
+    const pct = Math.round(count / newsArticles.length * 100);
+    const bar = '█'.repeat(Math.min(Math.round(pct / 5), 15));
+    analysis += `- ${themeIcons[theme] || '📊'} **${theme.charAt(0).toUpperCase() + theme.slice(1)}**: ${count} signals (${pct}%) ${bar}\n`;
+  });
+
+  // Sinch opportunity heat map
+  const sinchKw = ['messaging', 'communication', 'api', 'notification', 'sms', 'rcs', 'digital', 'platform', 'customer engagement', 'chatbot', 'omnichannel', 'cpaas'];
+  analysis += `\n### 🎯 Sinch Opportunity Heat Map\n`;
+  analysis += `| Company | Sinch Signals | Opportunity |\n|---------|---------------|-------------|\n`;
+  Object.entries(companies).forEach(([co, _]) => {
+    const coArticles = newsArticles.filter(a => a.company === co);
+    const sinchCount = coArticles.filter(a => {
+      const t = ((a.title || '') + ' ' + (a.description || '')).toLowerCase();
+      return sinchKw.some(kw => t.includes(kw));
+    }).length;
+    if (sinchCount > 0) {
+      const opp = sinchCount >= 3 ? '🔥 Hot - Engage Now' : sinchCount >= 2 ? '⚡ Warm - Schedule Call' : '📌 Monitor';
+      analysis += `| ${co} | ${sinchCount} | ${opp} |\n`;
+    }
+  });
+
+  // Period-specific recommendations
+  if (period === 'quarterly') {
+    analysis += `\n### 📋 Quarterly Planning Recommendations\n\n`;
+    analysis += `1. **Executive Engagement**: Schedule C-level touchpoints with top 3 active accounts\n`;
+    analysis += `2. **Pipeline Review**: ${themes.expansion + themes.partnership} expansion/partnership signals suggest new revenue opportunities\n`;
+    analysis += `3. **Risk Mitigation**: ${themes.risk} risk signals require proactive account health monitoring\n`;
+    analysis += `4. **Product Alignment**: ${themes.messaging + themes.digital} digital/messaging signals indicate strong demand for Sinch solutions\n`;
+    analysis += `5. **Competitive Intelligence**: Review competitor mentions and prepare displacement strategies\n`;
+  } else if (period === 'monthly') {
+    analysis += `\n### 📋 Monthly Focus Areas\n\n`;
+    analysis += `1. **QBR Prep**: Update decks for accounts with 3+ signals this month\n`;
+    analysis += `2. **Upsell Pipeline**: ${themes.digital} digital transformation signals = API expansion conversations\n`;
+    analysis += `3. **Relationship Building**: Share relevant insights with champions at top accounts\n`;
+    analysis += `4. **Team Sync**: Brief your AE partners on the ${sorted.length} accounts showing activity\n`;
+  }
+
+  return analysis;
+}
+
+function getWeekNumber(d) {
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7);
+}
+
+/**
+ * Generate heuristic strategy report with CSM actionable reminders
+ * @param {Array} newsArticles - news articles to analyze
+ * @param {string} period - 'daily', 'weekly', 'monthly', 'quarterly'
+ */
+function generateHeuristicReport(newsArticles, period = 'daily') {
   if (!newsArticles || newsArticles.length === 0) {
     return '# MarketFeed Strategic Report\n\nNo recent news available. Please sync news first or select a broader time range.';
   }
@@ -198,9 +331,12 @@ function generateHeuristicReport(newsArticles) {
     return sinchKeywords.some(kw => text.includes(kw));
   });
 
-  let report = `# 📊 MarketFeed Strategic Briefing\n`;
+  const ctx = getPeriodContext(period);
+
+  let report = `# 📊 MarketFeed ${ctx.label}\n`;
   report += `> **Sinch Enterprise & Mid-Market CSM Intelligence** | ${date}\n`;
-  report += `> ${newsArticles.length} signals | ${companies.length} accounts | ${sinchOpportunities.length} Sinch-relevant\n\n`;
+  report += `> **Period:** ${ctx.timeframe} | ${newsArticles.length} signals | ${companies.length} accounts | ${sinchOpportunities.length} Sinch-relevant\n`;
+  report += `> *${ctx.focusNote}*\n\n`;
 
   // ===== CSM ACTION REMINDERS (TOP PRIORITY) =====
   report += `---\n\n## 🚨 **CSM Action Reminders**\n\n`;
@@ -295,10 +431,13 @@ function generateHeuristicReport(newsArticles) {
     report += `\n> **Next Step:** ${template.actions[Math.floor(Math.random() * template.actions.length)]}\n\n`;
   });
 
+  // ===== TREND ANALYSIS (for weekly/monthly/quarterly) =====
+  report += generateTrendAnalysis(newsArticles, period);
+
   // ===== FOOTER =====
-  report += `---\n\n`;
+  report += `\n---\n\n`;
   report += `*Generated by MarketFeed | Sinch Enterprise & Mid-Market CSM Team*\n`;
-  report += `*Report Date: ${date} | Next refresh recommended in 24 hours*\n`;
+  report += `*Report Date: ${date} | ${ctx.refreshNote}*\n`;
 
   return report;
 }

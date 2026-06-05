@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const compression = require('compression');
 const newsRoutes = require('./routes/news');
 const { aggregateAllNews, getNews, getNewsCount } = require('./services/newsAggregator');
 const { generateHeuristicReport } = require('./services/strategyEngine');
@@ -10,19 +11,62 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(compression()); // gzip all responses
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Static files with aggressive caching for assets
+app.use(express.static(path.join(__dirname, '../frontend'), {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Cache images/css/js longer
+    if (filePath.match(/\.(png|jpg|svg|ico|css|js)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 24h
+    }
+  }
+}));
+
+// Simple in-memory cache for API responses
+const apiCache = new Map();
+const CACHE_TTL = 60 * 1000; // 1 minute cache for news API
+function getCached(key) {
+  const entry = apiCache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  return null;
+}
+function setCache(key, data) {
+  apiCache.set(key, { data, ts: Date.now() });
+  // Limit cache size
+  if (apiCache.size > 50) {
+    const oldest = apiCache.keys().next().value;
+    apiCache.delete(oldest);
+  }
+}
 
 // API Routes
 app.use('/api/news', newsRoutes);
 
 // AI Strategy Report (heuristic, no API key needed)
+// Supports period: 'daily', 'weekly', 'monthly', 'quarterly'
 app.post('/api/news/ai/strategy', async (req, res) => {
   try {
-    const { news } = req.body;
-    const report = generateHeuristicReport(news || []);
-    res.json({ success: true, report });
+    const { news, period = 'daily' } = req.body;
+    let articles = news || [];
+
+    // For weekly/monthly/quarterly, fetch from DB if no news provided or if period requires more data
+    if (['weekly', 'monthly', 'quarterly'].includes(period)) {
+      const daysMap = { weekly: 7, monthly: 30, quarterly: 90 };
+      const days = daysMap[period] || 1;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      const dbArticles = await getNews({ startDate: startDate.toISOString(), limit: 500 });
+      if (dbArticles && dbArticles.length > 0) articles = dbArticles;
+    }
+
+    const report = generateHeuristicReport(articles, period);
+    res.json({ success: true, report, period, articleCount: articles.length });
   } catch (error) {
     console.error('[Strategy]', error.message);
     res.status(500).json({ success: false, error: error.message });
@@ -284,6 +328,10 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[MarketFeed] Running on port ${PORT}`);
+
+  // DB maintenance on startup
+  const { cleanupOldArticles } = require('./models/db');
+  setTimeout(() => cleanupOldArticles(), 5000);
 
   // Auto-sync on startup (non-blocking)
   setTimeout(async () => {

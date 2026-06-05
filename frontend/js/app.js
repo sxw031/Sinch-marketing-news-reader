@@ -454,18 +454,42 @@ function setupEventListeners() {
 
   // ==================== STRATEGY REPORT ====================
   const reportModal = document.getElementById('reportModal');
-  document.getElementById('generateReportBtn').addEventListener('click', async () => {
+  // Report dropdown toggle
+  const reportDropdown = document.getElementById('reportDropdownMenu');
+  document.getElementById('generateReportBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    reportDropdown.classList.toggle('show');
+  });
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => reportDropdown.classList.remove('show'));
+  reportDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+  // Handle period selection
+  document.querySelectorAll('.report-period-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const period = btn.dataset.period;
+      reportDropdown.classList.remove('show');
+      generateStrategyReport(period);
+    });
+  });
+
+  async function generateStrategyReport(period = 'daily') {
+    const periodLabels = { daily: 'Daily Briefing', weekly: 'Weekly Review', monthly: 'Monthly Assessment', quarterly: 'Quarterly Intelligence' };
     reportModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
     const content = document.getElementById('reportContent');
-    content.innerHTML = '<div class="report-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px;"><div class="spinner"></div><p>Generating strategic analysis...</p></div>';
+    content.innerHTML = `<div class="report-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px;"><div class="spinner"></div><p>Generating ${periodLabels[period] || 'strategic analysis'}...</p></div>`;
     try {
-      const newsForReport = allNews.filter(n => n.category === 'Strategic Insights').slice(0, 20);
-      const fallback = newsForReport.length > 0 ? newsForReport : allNews.slice(0, 15);
+      // For daily, send current news; for longer periods, backend fetches from DB
+      const payload = { period };
+      if (period === 'daily') {
+        const newsForReport = allNews.filter(n => n.category === 'Strategic Insights').slice(0, 20);
+        payload.news = newsForReport.length > 0 ? newsForReport : allNews.slice(0, 15);
+      }
       const res = await fetch('/api/news/ai/strategy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ news: fallback })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (data.success) {
@@ -476,7 +500,7 @@ function setupEventListeners() {
     } catch (e) {
       content.innerHTML = '<p style="text-align:center;padding:2rem;">Error generating report. Please try again.</p>';
     }
-  });
+  }
   document.getElementById('closeReportModal').addEventListener('click', () => { reportModal.style.display = 'none'; document.body.style.overflow = ''; });
 
   // Listen to report button

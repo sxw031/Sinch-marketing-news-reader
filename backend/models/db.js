@@ -31,10 +31,33 @@ function initSchema() {
       fetchedAt TEXT DEFAULT (datetime('now')),
       UNIQUE(title, company)
     )`);
+    // Single-column indexes
     db.run(`CREATE INDEX IF NOT EXISTS idx_company ON news(company)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_published ON news(publishedAt DESC)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_source ON news(source)`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_category ON news(category)`);
+    // Compound indexes for common query patterns
+    db.run(`CREATE INDEX IF NOT EXISTS idx_company_published ON news(company, publishedAt DESC)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_published_company ON news(publishedAt DESC, company)`);
+    // Optimize: run ANALYZE to help query planner
+    db.run(`ANALYZE`);
+  });
+}
+
+/**
+ * Data retention: remove articles older than 120 days to keep DB lean
+ * Called periodically from server startup
+ */
+function cleanupOldArticles() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 120);
+  const cutoffISO = cutoff.toISOString();
+  db.run(`DELETE FROM news WHERE publishedAt < ?`, [cutoffISO], function(err) {
+    if (err) console.error('[DB Cleanup] Error:', err.message);
+    else if (this.changes > 0) {
+      console.log(`[DB Cleanup] Removed ${this.changes} articles older than 120 days`);
+      db.run('PRAGMA optimize');
+    }
   });
 }
 
@@ -53,4 +76,4 @@ const query = {
   })
 };
 
-module.exports = { db, query };
+module.exports = { db, query, cleanupOldArticles };
